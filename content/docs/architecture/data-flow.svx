@@ -1,0 +1,70 @@
+---
+title: Data Flow
+description: How data moves through the Lament system.
+section: Architecture
+order: 3
+---
+
+## Ingestion Flow
+
+The scraper pipeline processes music in this order:
+
+```
+1. Search Spotify for track metadata
+2. Match track to YouTube video
+3. Download audio via yt-dlp
+4. Convert to HLS segments (m3u8 + ts files)
+5. Fetch cover art (Spotify / Deezer / iTunes)
+6. Process images with sharp (resize, WebP)
+7. Fetch lyrics from Genius
+8. Upload audio segments to R2
+9. Upload cover images to R2
+10. Insert metadata into LibSQL
+```
+
+## Request Flow
+
+When a user interacts with the Lament frontend:
+
+```
+Browser ──► SvelteKit Server Route (+server.ts)
+                    │
+                    │ Injects X-Master-Key header
+                    │ Applies TTL caching
+                    ▼
+              Hono API (Cloudflare Workers)
+                    │
+            ┌───────┼───────┐
+            ▼       ▼       ▼
+         LibSQL   Cache    R2
+         (data)  (LRU)  (files)
+```
+
+Key points:
+
+- The browser **never** communicates directly with the Hono API.
+- Credentials are injected server-side by SvelteKit.
+- Public data endpoints have cache-control headers applied.
+
+## Audio Streaming Flow
+
+```
+Browser requests track playback
+        │
+        ▼
+SvelteKit proxy: GET /api/stream/:id/playlist.m3u8
+        │
+        ▼
+Hono API: GET /stream/:id/playlist.m3u8
+        │
+        ▼
+R2: Fetch m3u8 manifest
+        │
+        ▼
+Browser (HLS.js) parses manifest
+        │
+        ▼
+Sequential requests for .ts segments
+```
+
+HLS.js handles segment loading, buffering, and adaptive quality.
