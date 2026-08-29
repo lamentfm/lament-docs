@@ -1,0 +1,51 @@
+---
+title: Deployment
+description: Deploying Lament services to production.
+section: Infrastructure
+order: 4
+---
+
+## API Deployment
+
+The API deploys to **Cloudflare Workers**:
+
+```bash
+cd lament-api
+bunx wrangler deploy
+```
+
+Secrets are configured via Wrangler:
+
+```bash
+bunx wrangler secret put MASTER_KEY
+bunx wrangler secret put TURSO_DATABASE_URL
+bunx wrangler secret put TURSO_AUTH_TOKEN
+```
+
+## Frontend Deployment
+
+The SvelteKit frontend uses `@sveltejs/adapter-cloudflare` for Cloudflare Pages:
+
+```bash
+cd lament
+bun run build
+```
+
+The build output is deployed to Cloudflare Pages via Git integration or manual upload.
+
+## Documentation Deployment
+
+The documentation site uses `@sveltejs/adapter-auto`:
+
+```bash
+cd lament-docs
+bun run build
+```
+
+## Database
+
+The LibSQL database is hosted on **Turso**. No separate deployment needed — it's a managed service.
+
+## CI/CD
+
+GitHub Actions workflows in `.github/` automate builds and deployments for each repository.
