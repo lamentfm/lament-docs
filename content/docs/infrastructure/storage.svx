@@ -1,0 +1,55 @@
+---
+title: Storage
+description: Object storage with Cloudflare R2.
+section: Infrastructure
+order: 2
+---
+
+## Cloudflare R2
+
+Lament uses **Cloudflare R2** (S3-compatible) for storing:
+
+- **HLS audio segments** (`.m3u8` playlists and `.ts` segments)
+- **Cover artwork** (album covers, artist images)
+- **Processed images** (WebP conversions)
+
+## Access
+
+R2 is accessed via the AWS SDK S3-compatible client:
+
+```typescript
+import { S3Client } from '@aws-sdk/client-s3';
+
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY
+  }
+});
+```
+
+## File Organization
+
+```
+R2 bucket/
+├── audio/
+│   └── {track-id}/
+│       ├── playlist.m3u8
+│       ├── segment-000.ts
+│       ├── segment-001.ts
+│       └── ...
+├── covers/
+│   ├── tracks/
+│   ├── albums/
+│   └── artists/
+```
+
+## Image Processing
+
+The scraper uses `sharp` for image processing before upload:
+
+- Resize to standard dimensions
+- Convert to WebP format
+- Optimize file size
