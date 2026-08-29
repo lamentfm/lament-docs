@@ -1,0 +1,71 @@
+---
+title: API Development
+description: Developing and extending the Lament API.
+section: Development
+order: 3
+---
+
+## Framework
+
+The API uses **Hono**, a lightweight web framework optimized for edge runtimes.
+
+## Route Structure
+
+Routes are defined in `src/routes/edge-routes.ts` and follow this pattern:
+
+```typescript
+import { Hono } from 'hono';
+import * as trackController from '../controllers/track.controller';
+
+const app = new Hono();
+
+// Public read endpoints
+app.get('/tracks', trackController.listTracks);
+app.get('/tracks/:id', trackController.getTrack);
+
+// Protected mutation endpoints
+app.post('/tracks', trackController.createTrack);
+app.put('/tracks/:id', trackController.updateTrack);
+app.delete('/tracks/:id', trackController.deleteTrack);
+```
+
+## Controllers
+
+Controllers are in `src/controllers/` and handle request processing:
+
+```typescript
+export const listTracks = async (c: Context) => {
+  const offset = parseInt(c.req.query('offset') || '0');
+  const limit = parseInt(c.req.query('limit') || '20');
+  // ... fetch and return data
+  return c.json({ data: tracks, total });
+};
+```
+
+## Middleware
+
+### Authentication
+
+The `MasterOnly` middleware protects admin endpoints:
+
+```typescript
+import { MasterOnly } from '../middlewares/auth.middleware';
+
+app.post('/tracks', MasterOnly, trackController.createTrack);
+```
+
+### Cache Headers
+
+Cache-control headers are applied to public read endpoints:
+
+```typescript
+app.use('/tracks/*', cacheHeaders);
+app.use('/artists/*', cacheHeaders);
+```
+
+## Adding a New Endpoint
+
+1. Create a controller in `src/controllers/`
+2. Add routes in `src/routes/edge-routes.ts`
+3. Apply middleware as needed (auth, cache)
+4. Test with `bun run dev`
