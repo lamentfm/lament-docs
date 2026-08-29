@@ -1,0 +1,60 @@
+---
+title: HLS Streaming
+description: HTTP Live Streaming implementation in Lament.
+section: Media
+order: 4
+---
+
+## Overview
+
+Lament uses **HLS (HTTP Live Streaming)** for audio delivery. This allows adaptive streaming and efficient caching.
+
+## How HLS Works
+
+1. Audio is split into small segments (`.ts` files)
+2. A manifest file (`.m3u8`) lists all segments with their duration
+3. The client downloads the manifest, then requests segments sequentially
+4. Segments are cached by CDN for efficient delivery
+
+## API Endpoints
+
+```
+GET /stream/:id/playlist.m3u8
+```
+
+Returns the HLS manifest for a track. The manifest contains relative URLs to segments.
+
+```
+GET /stream/:id/:segment
+```
+
+Returns an individual audio segment. These are served directly from R2 storage.
+
+## Frontend Integration
+
+The frontend uses `HLS.js` for playback:
+
+```typescript
+import Hls from 'hls.js';
+
+const hls = new Hls();
+hls.loadSource(`/api/stream/${trackId}/playlist.m3u8`);
+hls.attachMedia(audioElement);
+```
+
+`HLS.js` handles:
+- Manifest parsing
+- Segment downloading and buffering
+- Error recovery
+- Playback state management
+
+## Storage Structure
+
+```
+R2: audio/{track-id}/
+├── playlist.m3u8
+├── segment-000.ts
+├── segment-001.ts
+├── segment-002.ts
+└── ...
+```
