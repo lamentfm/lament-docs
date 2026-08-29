@@ -1,0 +1,33 @@
+---
+title: Categories
+description: Track category endpoints.
+section: Categories
+order: 10
+method: GET
+endpoint: /categories
+---
+
+## List Categories
+
+```
+GET /categories
+```
+
+Returns all available track categories/genres.
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Rock",
+      "slug": "rock",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+Categories are used to classify tracks via the `track_categories` junction table.
