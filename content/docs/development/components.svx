@@ -1,0 +1,60 @@
+---
+title: Components
+description: Frontend component architecture and conventions.
+section: Development
+order: 2
+---
+
+## Component Framework
+
+Lament uses **Svelte 5** with Runes for all frontend components. Key patterns:
+
+### Props with `$props()`
+
+```svelte
+<script lang="ts">
+  let { title, count = 0 }: { title: string; count?: number } = $props();
+</script>
+```
+
+### Reactive State with `$state()` and `$derived()`
+
+```svelte
+<script lang="ts">
+  let items = $state<string[]>([]);
+  let total = $derived(items.length);
+</script>
+```
+
+## UI Library
+
+The project uses **shadcn-svelte** for base UI primitives. Components are installed via the CLI and live in `src/lib/components/ui/`.
+
+Available components include:
+
+- `button` — Primary button component with variants
+- `badge` — Status badges
+- `command` — Command palette primitives
+- `dialog` — Modal dialog
+- `input` — Form inputs
+- `textarea` — Multi-line text input
+
+## Icons
+
+All icons use **Lucide Svelte** for consistency:
+
+```svelte
+<script>
+  import { Search, Menu, Music } from 'lucide-svelte';
+</script>
+
+<Search size={16} />
+```
+
+## Styling
+
+Components use **Tailwind CSS v4** with custom CSS variables defined in `layout.css`. Use the existing design tokens:
+
+- Colors: `var(--color-accent)`, `var(--color-surface-1)`, etc.
+- Radii: `var(--radius-sm)`, `var(--radius-md)`, etc.
+- Transitions: `var(--transition-fast)`, `var(--transition-normal)`
