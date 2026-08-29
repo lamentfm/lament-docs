@@ -1,0 +1,38 @@
+---
+title: Lyrics
+description: Lyrics storage and retrieval in Lament.
+section: Media
+order: 3
+---
+
+## Data Model
+
+Lyrics are stored in the `lyrics` table with multi-language and variant support:
+
+| Field | Description |
+| --- | --- |
+| `track_id` | Reference to the track |
+| `language` | Language code (`en`, `id`, `jp`, etc.) |
+| `variant` | `original`, `translated`, `romanized`, `synced` |
+| `content` | The lyrics text content |
+
+## API Endpoints
+
+```
+GET /tracks/:id/lyrics    → Get lyrics for a track
+POST /tracks/:id/lyrics   → Add a lyrics variant
+GET /lyrics/:id           → Get lyrics by ID
+DELETE /lyrics/:lyricId   → Delete a lyrics entry
+```
+
+## Sources
+
+Lyrics are fetched from **Genius** via the `genius-lyrics` package during the scraping process.
+
+## Multiple Variants
+
+A single track can have multiple lyrics entries:
+- Original language lyrics
+- Translated versions
+- Romanized versions (for non-Latin scripts)
+- Time-synced lyrics (for karaoke-style display)
