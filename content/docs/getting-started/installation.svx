@@ -1,0 +1,72 @@
+---
+title: Installation
+description: Install and configure Lament locally.
+section: Getting Started
+order: 1
+---
+
+## Prerequisites
+
+Before installing Lament, ensure you have the following installed:
+
+- **Node.js** 18+ or **Bun** 1.0+
+- **Git**
+- A package manager (`bun` recommended)
+
+## Clone the repositories
+
+The Lament ecosystem consists of multiple repositories under the [lamentfm](https://github.com/lamentfm) GitHub organization:
+
+```bash
+git clone https://github.com/lamentfm/lament.git
+git clone https://github.com/lamentfm/lament-api.git
+git clone https://github.com/lamentfm/lament-scrapper.git
+git clone https://github.com/lamentfm/lament-docs.git
+```
+
+## Install dependencies
+
+### Frontend Client (`lament`)
+
+```bash
+cd lament
+bun install
+```
+
+### API Server (`lament-api`)
+
+```bash
+cd lament-api
+bun install
+```
+
+### Scraper (`lament-scrapper`)
+
+```bash
+cd lament-scrapper
+bun install
+```
+
+### Documentation (`lament-docs`)
+
+```bash
+cd lament-docs
+bun install
+```
+
+## Verify installation
+
+Each project can be started in development mode:
+
+```bash
+# Frontend
+cd lament && bun run dev
+
+# API
+cd lament-api && bun run dev
+
+# Docs
+cd lament-docs && bun run dev
+```
+
+See [Local Development](/docs/getting-started/local-development) for details on running the full stack.
