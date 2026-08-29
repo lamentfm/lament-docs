@@ -1,0 +1,70 @@
+---
+title: Project Structure
+description: File and directory structure of each Lament repository.
+section: Development
+order: 1
+---
+
+## Frontend (`lament`)
+
+```
+lament/
+├── src/
+│   ├── lib/
+│   │   ├── api.ts              # Client-side API utilities
+│   │   ├── server/
+│   │   │   └── api.ts          # Server-side proxy module
+│   │   └── components/         # Svelte components
+│   ├── routes/
+│   │   ├── +layout.svelte      # Root layout
+│   │   ├── +page.svelte        # Home page
+│   │   ├── api/                # Server proxy endpoints
+│   │   ├── artists/            # Artist pages
+│   │   ├── albums/             # Album pages
+│   │   └── ...
+│   └── app.html
+├── static/
+├── svelte.config.js
+├── vite.config.ts
+└── package.json
+```
+
+## API (`lament-api`)
+
+```
+lament-api/
+├── src/
+│   ├── index.ts                # App entry, middleware
+│   ├── server.ts               # Dev server (Hono Node adapter)
+│   ├── routes/
+│   │   ├── index.ts            # Route registration
+│   │   └── edge-routes.ts      # All edge route definitions
+│   ├── controllers/            # Request handlers
+│   ├── services/               # Business logic
+│   ├── middlewares/             # Auth, cache middleware
+│   ├── config/                 # Configuration
+│   ├── utils/                  # Utilities
+│   └── scripts/                # CLI scripts (migration, etc.)
+├── schema.sql                  # Database schema
+├── wrangler.jsonc              # Cloudflare Workers config
+└── package.json
+```
+
+## Scraper (`lament-scrapper`)
+
+```
+lament-scrapper/
+├── src/
+│   ├── index.ts                # Main scraper entry
+│   ├── spotify.ts              # Spotify metadata fetcher
+│   ├── downloader.ts           # YouTube audio downloader
+│   ├── lyrics.ts               # Lyrics fetcher (Genius)
+│   ├── lastfm.ts               # Last.fm metadata
+│   ├── cloud.ts                # R2 upload logic
+│   ├── db.ts                   # Database operations
+│   ├── config.ts               # Configuration
+│   ├── scripts/                # Utility scripts
+│   └── services/               # Additional services
+├── schema.sql
+└── package.json
+```
