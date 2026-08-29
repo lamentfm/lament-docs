@@ -1,0 +1,53 @@
+---
+title: Sources
+description: External data sources used by the scraper.
+section: Scraper
+order: 2
+---
+
+## Spotify
+
+Primary source for music metadata. Uses `spotify-web-api-node`.
+
+**Data obtained:**
+- Track title, duration, ISRC
+- Album title, cover art, release year
+- Artist name, genres
+- Spotify track ID (used for deduplication)
+
+**Authentication:** OAuth2 client credentials flow.
+
+## YouTube
+
+Audio source. Uses `yt-dlp-wrap` to invoke `yt-dlp`.
+
+**Process:**
+1. Search YouTube for the track (title + artist)
+2. Select best match
+3. Download audio stream
+4. Convert to HLS segments
+
+**Requirement:** `yt-dlp` must be installed on the system.
+
+## Last.fm
+
+Supplementary metadata source for artist images and additional data.
+
+**Data obtained:**
+- High-resolution artist images
+- Artist bio and tags
+- Similar artists
+
+**Authentication:** API key (free registration).
+
+## Genius
+
+Lyrics source. Uses the `genius-lyrics` package.
+
+**Data obtained:**
+- Song lyrics (plain text)
+- Multiple language variants when available
+
+## Deezer / iTunes
+
+Fallback sources for cover art and metadata verification. Accessed via public APIs (no authentication required).
