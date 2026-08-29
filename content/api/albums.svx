@@ -1,0 +1,71 @@
+---
+title: Albums
+description: Album management and retrieval endpoints.
+section: Albums
+order: 4
+method: GET
+endpoint: /albums
+---
+
+## List Albums
+
+```
+GET /albums
+```
+
+Returns a paginated list of albums.
+
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `offset` | integer | `0` | Items to skip |
+| `limit` | integer | `20` | Items per page |
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "artist_id": "uuid",
+      "title": "Album Title",
+      "slug": "album-title",
+      "cover_url": "https://...",
+      "year": 2024,
+      "type": "album",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 30
+}
+```
+
+## Get Album
+
+```
+GET /albums/:id
+```
+
+Returns a single album with its tracks.
+
+## Get Random Albums
+
+```
+GET /albums/random
+```
+
+## Count Albums
+
+```
+GET /albums/count
+```
+
+## Create / Update / Delete
+
+```
+POST /albums          # Create (auth required)
+PUT /albums/:id       # Update (auth required)
+DELETE /albums/:id    # Delete (auth required)
+```
