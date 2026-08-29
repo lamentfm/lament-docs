@@ -1,0 +1,56 @@
+---
+title: Requests
+description: Song request submission and tracking.
+section: Requests
+order: 8
+method: GET
+endpoint: /requests
+---
+
+## List Requests
+
+```
+GET /requests
+```
+
+Returns all song requests with their status.
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "query": "Song name - Artist",
+      "status": "pending",
+      "metadata": null,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+## Submit Request
+
+```
+POST /requests
+```
+
+Submit a new song request.
+
+### Request Body
+
+```json
+{
+  "query": "Song name - Artist name"
+}
+```
+
+### Status Values
+
+| Status | Description |
+| --- | --- |
+| `pending` | Request submitted, awaiting processing |
+| `done` | Request fulfilled, track added |
+| `rejected` | Request rejected |
