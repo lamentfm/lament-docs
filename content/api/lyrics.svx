@@ -1,0 +1,58 @@
+---
+title: Lyrics
+description: Lyrics retrieval and management.
+section: Lyrics
+order: 6
+method: GET
+endpoint: /tracks/:id/lyrics
+---
+
+## Get Lyrics by Track
+
+```
+GET /tracks/:id/lyrics
+```
+
+Returns all lyrics variants for a track.
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "track_id": "uuid",
+      "language": "en",
+      "variant": "original",
+      "content": "Lyrics text here..."
+    }
+  ]
+}
+```
+
+## Add Lyrics
+
+```
+POST /tracks/:id/lyrics
+```
+
+Add a new lyrics variant. Requires authentication.
+
+### Request Body
+
+```json
+{
+  "language": "en",
+  "variant": "translated",
+  "content": "Translated lyrics..."
+}
+```
+
+## Delete Lyrics
+
+```
+DELETE /lyrics/:lyricId
+```
+
+Delete a lyrics entry. Requires authentication.
