@@ -1,0 +1,79 @@
+---
+title: API Overview
+description: Overview of the Lament REST API.
+section: Overview
+order: 0
+---
+
+## Base URL
+
+```
+https://api.lament.rynds.my.id
+```
+
+## Authentication
+
+Most endpoints require the `X-Master-Key` header:
+
+```bash
+curl -H "X-Master-Key: your_key" https://api.lament.rynds.my.id/tracks
+```
+
+Public endpoints (streaming, health checks) do not require authentication.
+
+## Response Format
+
+All endpoints return JSON. Successful responses follow this pattern:
+
+```json
+{
+  "data": [...],
+  "total": 100
+}
+```
+
+Error responses:
+
+```json
+{
+  "error": "E_AUTH"
+}
+```
+
+## Status Codes
+
+| Code | Description |
+| --- | --- |
+| `200` | Success |
+| `201` | Created |
+| `401` | Unauthorized — missing or invalid API key |
+| `404` | Not found |
+| `500` | Internal server error |
+| `503` | Service unavailable — maintenance mode |
+
+## Pagination
+
+List endpoints support pagination via query parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `offset` | integer | `0` | Number of items to skip |
+| `limit` | integer | `20` | Number of items to return |
+
+## Rate Limiting
+
+No explicit rate limiting is currently enforced. Cache-control headers are applied to public endpoints.
+
+## Available Endpoints
+
+| Resource | Endpoints |
+| --- | --- |
+| [Tracks](/api/tracks) | `GET /tracks`, `GET /tracks/:id`, `POST /tracks`, `PUT /tracks/:id`, `DELETE /tracks/:id` |
+| [Artists](/api/artists) | `GET /artists`, `GET /artists/:id`, `POST /artists`, `PUT /artists/:id`, `DELETE /artists/:id` |
+| [Albums](/api/albums) | `GET /albums`, `GET /albums/:id`, `POST /albums`, `PUT /albums/:id`, `DELETE /albums/:id` |
+| [Search](/api/search) | `GET /search` |
+| [Lyrics](/api/lyrics) | `GET /tracks/:id/lyrics`, `POST /tracks/:id/lyrics`, `DELETE /lyrics/:id` |
+| [Streaming](/api/streaming) | `GET /stream/:id/playlist.m3u8`, `GET /stream/:id/:segment` |
+| [Requests](/api/requests) | `GET /requests`, `POST /requests` |
+| [Playlists](/api/playlists) | `GET /playlists/:id`, `POST /playlists`, `PUT /playlists/:id`, `DELETE /playlists/:id` |
+| [Categories](/api/categories) | `GET /categories` |
