@@ -1,0 +1,47 @@
+---
+title: Applications
+description: Overview of each application in the Lament ecosystem.
+section: Architecture
+order: 2
+---
+
+## Frontend Client (`lament`)
+
+The main web client built with **SvelteKit** and **Svelte 5**.
+
+- **SSR & Routing** — SvelteKit handles server-side rendering and page routing.
+- **Proxy Endpoints** — Server-side `+server.ts` files proxy API requests, injecting credentials.
+- **Audio Playback** — `HLS.js` handles adaptive HLS audio streaming in the browser.
+- **State Management** — Svelte 5 Runes (`$state`, `$derived`, `$props`) for reactive state.
+- **Styling** — Tailwind CSS v4 with custom CSS variables for theming.
+- **Icons** — Lucide Svelte for consistent iconography.
+
+## API Server (`lament-api`)
+
+The backend API built with **Hono** and deployed on **Cloudflare Workers**.
+
+- **Hono Framework** — Lightweight, edge-optimized web framework.
+- **Database** — LibSQL via `@libsql/client` (Turso hosted).
+- **Object Storage** — AWS SDK S3-compatible client for Cloudflare R2.
+- **Cache** — LRU in-memory cache with cache-control headers.
+- **Auth** — Master key authentication via `X-Master-Key` header.
+- **Maintenance Mode** — Database-driven maintenance state with middleware bypass.
+
+## Scraper (`lament-scrapper`)
+
+The data ingestion pipeline:
+
+- **Spotify** — Fetches track, album, and artist metadata using `spotify-web-api-node`.
+- **YouTube** — Downloads audio using `yt-dlp-wrap`.
+- **Last.fm** — Fetches artist images and additional metadata.
+- **Genius** — Fetches song lyrics via `genius-lyrics`.
+- **Image Processing** — `sharp` for resizing and WebP conversion.
+- **Upload** — Pushes processed audio (HLS) and images to Cloudflare R2.
+
+## Mobile Client (`lament-mobile`)
+
+A Flutter/Dart mobile client for iOS and Android.
+
+## Admin Dashboard (`lament-admin`)
+
+Administrative interface for managing content, users, and system status.
