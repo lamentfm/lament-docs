@@ -1,0 +1,54 @@
+---
+title: Security Practices
+description: Security best practices for the Lament project.
+section: Security
+order: 3
+---
+
+## Proxy Architecture
+
+The most important security practice in Lament is the **proxy architecture**. The frontend never communicates directly with the backend API.
+
+```
+Browser → SvelteKit Server → Hono API
+```
+
+This ensures:
+- API keys are never exposed in client-side JavaScript
+- CORS is controlled at the API level
+- Server-side validation happens before API calls
+
+## CORS
+
+The API configures CORS via the `ALLOWED_ORIGINS` environment variable:
+
+```typescript
+app.use('*', cors({
+  origin: (origin) => {
+    const allowed = (process.env.ALLOWED_ORIGINS || '')
+      .split(',').map(o => o.trim()).filter(Boolean);
+    return allowed.includes(origin) ? origin : null;
+  },
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
+}));
+```
+
+## Password Hashing
+
+Client API keys are hashed with `bcryptjs` before storage.
+
+## Input Validation
+
+Controllers validate input parameters before processing. Invalid inputs return appropriate HTTP error codes.
+
+## Maintenance Mode
+
+The maintenance system allows disabling the API during updates:
+
+```bash
+curl -X PUT -H "X-Master-Key: key" \
+  -H "Content-Type: application/json" \
+  -d '{"lament_api": true, "description": "Updating..."}' \
+  https://api.lament.rynds.my.id/maintenance
+```
