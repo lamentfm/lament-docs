@@ -1,0 +1,52 @@
+---
+title: Maintenance
+description: Maintenance mode and procedures.
+section: Operations
+order: 3
+---
+
+## Maintenance Mode
+
+Lament has a database-driven maintenance mode that can be toggled per service.
+
+### Enable Maintenance
+
+```bash
+curl -X PUT \
+  -H "X-Master-Key: your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"lament_api": true, "lament": true, "description": "Scheduled maintenance"}' \
+  https://api.lament.rynds.my.id/maintenance
+```
+
+### Disable Maintenance
+
+```bash
+curl -X PUT \
+  -H "X-Master-Key: your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"lament_api": false, "lament": false, "description": ""}' \
+  https://api.lament.rynds.my.id/maintenance
+```
+
+### Behavior
+
+When `lament_api` is `true`:
+- All API endpoints (except `/health`, `/ping`, `/maintenance`) return `503`
+- The response includes a maintenance description and timestamp
+- The bypass can be enabled with `BYPASS_MAINTENANCE=true` env var
+
+When `lament` is `true`:
+- The SvelteKit frontend redirects users to a maintenance page
+- The redirect is handled in `hooks.server.ts`
+
+## Repair Scripts
+
+The scraper includes several repair scripts:
+
+```bash
+bun run repair            # Repair metadata
+bun run repair:audio      # Repair audio files
+bun run repair:title      # Repair track titles
+bun run repair:tracks     # Repair track images
+```
