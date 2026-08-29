@@ -1,0 +1,42 @@
+---
+title: Backup
+description: Database and storage backup procedures.
+section: Operations
+order: 2
+---
+
+## Database Backup
+
+The scraper includes backup and restore scripts:
+
+```bash
+cd lament-scrapper
+
+# Create backup
+bun run backup
+
+# Restore from backup
+bun run restore
+```
+
+Backups are stored as JSON files in the project directory.
+
+## R2 Storage
+
+Cloudflare R2 data can be backed up using the AWS CLI (S3-compatible):
+
+```bash
+aws s3 sync s3://your-bucket ./backup \
+  --endpoint-url https://ACCOUNT_ID.r2.cloudflarestorage.com
+```
+
+## Reconciliation
+
+To ensure database and R2 storage are in sync:
+
+```bash
+cd lament-scrapper
+bun run reconcile
+```
+
+This checks for orphaned records and missing files.
