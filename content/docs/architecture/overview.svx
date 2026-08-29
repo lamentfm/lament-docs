@@ -1,0 +1,52 @@
+---
+title: Overview
+description: High-level overview of the Lament architecture and ecosystem.
+section: Architecture
+order: 1
+---
+
+## What is Lament?
+
+Lament is a free, self-hosted music streaming platform consisting of multiple services that work together to scrape, process, store, and deliver music content.
+
+## Ecosystem
+
+The Lament project is organized under the **lamentfm** GitHub organization with these repositories:
+
+| Repository | Description | Stack |
+| --- | --- | --- |
+| `lament` | Web client / frontend | SvelteKit, Tailwind CSS v4, HLS.js |
+| `lament-api` | Core API server | Hono, Cloudflare Workers |
+| `lament-scrapper` | Music metadata scraper & audio downloader | Node.js, Spotify API, yt-dlp |
+| `lament-docs` | Documentation site | SvelteKit, mdsvex |
+| `lament-mobile` | Mobile client | Flutter / Dart |
+| `lament-admin` | Admin dashboard | — |
+
+## Data Flow
+
+```
+Spotify / YouTube / Last.fm
+        │
+        ▼
+   lament-scrapper ──────► LibSQL (Turso)
+        │                      ▲
+        ▼                      │
+   Cloudflare R2           lament-api (Hono)
+   (HLS segments,              │
+    cover art)                  ▼
+                          lament (SvelteKit)
+                               │
+                               ▼
+                          Browser / Client
+```
+
+1. **Scraper** fetches metadata from Spotify, downloads audio from YouTube, fetches lyrics from Genius, and uploads everything to R2 storage and LibSQL.
+2. **API** serves data from LibSQL and streams audio from R2 via HLS.
+3. **Frontend** proxies API requests through SvelteKit server endpoints, keeping credentials hidden from the browser.
+
+## Key Design Decisions
+
+- **Proxy architecture** — The frontend never communicates directly with the backend API. All requests go through SvelteKit server routes that inject authentication.
+- **Edge deployment** — The API runs on Cloudflare Workers for global low-latency access.
+- **HLS streaming** — Audio is served as HLS segments for adaptive streaming rather than direct file downloads.
+- **Decoupled services** — Each component is independently deployable and has its own repository.
