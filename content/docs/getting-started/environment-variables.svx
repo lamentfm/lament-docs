@@ -1,0 +1,51 @@
+---
+title: Environment Variables
+description: Configure environment variables for each Lament service.
+section: Getting Started
+order: 3
+---
+
+## API (`lament-api`)
+
+The API requires the following environment variables. See `.env.example` for reference.
+
+| Variable | Description | Required |
+| --- | --- | --- |
+| `MASTER_KEY` | Master authentication key for admin endpoints | Yes |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | No |
+| `TURSO_DATABASE_URL` | LibSQL/Turso database connection URL | Yes |
+| `TURSO_AUTH_TOKEN` | Authentication token for Turso | Yes |
+| `R2_ACCOUNT_ID` | Cloudflare R2 account ID | Yes |
+| `R2_ACCESS_KEY_ID` | R2 access key | Yes |
+| `R2_SECRET_ACCESS_KEY` | R2 secret key | Yes |
+| `R2_BUCKET` | R2 bucket name | Yes |
+| `BYPASS_MAINTENANCE` | Set to `true` to bypass maintenance mode | No |
+
+## Frontend (`lament`)
+
+| Variable | Description | Required |
+| --- | --- | --- |
+| `LAMENT_API_URL` | URL of the Lament API | Yes |
+| `LAMENT_API_KEY` | API key for authentication | Yes |
+
+## Scraper (`lament-scrapper`)
+
+| Variable | Description | Required |
+| --- | --- | --- |
+| `SPOTIFY_CLIENT_ID` | Spotify API client ID | Yes |
+| `SPOTIFY_CLIENT_SECRET` | Spotify API client secret | Yes |
+| `LASTFM_API_KEY` | Last.fm API key for artist metadata | No |
+| `GENIUS_TOKEN` | Genius API token for lyrics | No |
+| `TURSO_DATABASE_URL` | Database URL (same as API) | Yes |
+| `TURSO_AUTH_TOKEN` | Database token (same as API) | Yes |
+| `R2_*` | R2 credentials (same as API) | Yes |
+
+## Setting up `.env`
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Never commit `.env` files to version control. All repositories include `.env` in `.gitignore`.
