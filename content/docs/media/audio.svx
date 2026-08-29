@@ -1,0 +1,34 @@
+---
+title: Audio
+description: Audio processing and storage in Lament.
+section: Media
+order: 1
+---
+
+## Audio Format
+
+Lament uses **HLS (HTTP Live Streaming)** for audio delivery. Each track is stored as:
+
+- A `.m3u8` playlist manifest
+- Multiple `.ts` transport stream segments
+
+## Processing Pipeline
+
+1. Audio is downloaded from YouTube via `yt-dlp`
+2. Converted to HLS segments using FFmpeg
+3. Uploaded to Cloudflare R2
+
+## Streaming
+
+The API provides HLS endpoints:
+
+```
+GET /stream/:id/playlist.m3u8    → HLS manifest
+GET /stream/:id/:segment         → Audio segment
+```
+
+The frontend uses `HLS.js` to parse the manifest and request segments for playback.
+
+## Audio Quality
+
+Audio quality depends on the YouTube source. The scraper downloads the best available audio stream.
