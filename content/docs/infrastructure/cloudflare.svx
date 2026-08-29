@@ -1,0 +1,42 @@
+---
+title: Cloudflare
+description: Cloudflare Workers and edge deployment configuration.
+section: Infrastructure
+order: 1
+---
+
+## Cloudflare Workers
+
+The API is deployed to **Cloudflare Workers** for edge execution. Configuration is in `wrangler.jsonc`.
+
+## Configuration
+
+```jsonc
+{
+  "name": "lament-api",
+  "compatibility_date": "2024-01-01",
+  "main": "src/index-edge.ts"
+}
+```
+
+## Edge Runtime
+
+The edge entry point (`src/index-edge.ts`) uses the same Hono app but with Cloudflare-specific bindings:
+
+- Environment variables are accessed via `c.env` instead of `process.env`
+- R2 buckets are bound as Workers bindings
+- D1/Turso connections use edge-compatible drivers
+
+## Deployment
+
+Deploy to Cloudflare Workers:
+
+```bash
+bunx wrangler deploy
+```
+
+For local development with Workers runtime:
+
+```bash
+bunx wrangler dev
+```
