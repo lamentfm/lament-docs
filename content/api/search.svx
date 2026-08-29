@@ -1,0 +1,40 @@
+---
+title: Search
+description: Global search across tracks, artists, and albums.
+section: Search
+order: 5
+method: GET
+endpoint: /search
+---
+
+## Global Search
+
+```
+GET /search?q=query
+```
+
+Searches across tracks, artists, and albums with a single query.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `q` | string | Yes | Search query |
+
+### Response
+
+```json
+{
+  "tracks": [
+    { "id": "uuid", "title": "...", "artist_id": "..." }
+  ],
+  "artists": [
+    { "id": "uuid", "name": "..." }
+  ],
+  "albums": [
+    { "id": "uuid", "title": "..." }
+  ]
+}
+```
+
+The response contains separate arrays for each entity type. The frontend parses and displays these in categorized sections.
