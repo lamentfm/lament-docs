@@ -1,0 +1,62 @@
+---
+title: Troubleshooting
+description: General troubleshooting guide for Lament.
+section: Operations
+order: 4
+---
+
+## API Issues
+
+### API returns 401 Unauthorized
+
+Ensure the `X-Master-Key` header matches the `MASTER_KEY` environment variable.
+
+### API returns 503 Service Unavailable
+
+The API is in maintenance mode. Check status:
+
+```bash
+curl https://api.lament.rynds.my.id/maintenance
+```
+
+### Database connection failed
+
+Verify Turso credentials:
+- `TURSO_DATABASE_URL` — should be `libsql://your-db.turso.io`
+- `TURSO_AUTH_TOKEN` — valid authentication token
+
+## Frontend Issues
+
+### Blank page on load
+
+Check browser console for errors. Common causes:
+- API URL misconfigured in `.env`
+- CORS blocking requests
+- API is in maintenance mode
+
+### Audio not playing
+
+- Verify the track has HLS segments in R2
+- Check browser console for HLS.js errors
+- Ensure the stream endpoint is accessible
+
+## Build Issues
+
+### SvelteKit build fails
+
+```bash
+bun run check    # Type checking
+bun run build    # Full build
+```
+
+Common fixes:
+- Run `bunx svelte-kit sync` to regenerate types
+- Clear `.svelte-kit` directory and rebuild
+
+### Wrangler deployment fails
+
+Verify `wrangler.jsonc` configuration and that all secrets are set:
+
+```bash
+bunx wrangler secret list
+```
