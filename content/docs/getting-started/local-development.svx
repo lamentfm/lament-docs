@@ -1,0 +1,70 @@
+---
+title: Local Development
+description: Run Lament locally for development and testing.
+section: Getting Started
+order: 2
+---
+
+## Running the API
+
+The API server uses Hono with `tsx` for development:
+
+```bash
+cd lament-api
+bun run dev
+```
+
+This starts the API at `http://localhost:3000` using `tsx --watch` for hot reloading.
+
+For the edge-compatible version (Cloudflare Workers), use `wrangler`:
+
+```bash
+bunx wrangler dev
+```
+
+## Running the Frontend
+
+The SvelteKit frontend connects to the API through server-side proxy endpoints:
+
+```bash
+cd lament
+bun run dev
+```
+
+The frontend dev server starts at `http://localhost:5173`.
+
+## Running the Docs
+
+```bash
+cd lament-docs
+bun run dev
+```
+
+The documentation site starts at `http://localhost:5174` (or next available port).
+
+## Running the Scraper
+
+The scraper is a CLI tool, not a server. Run individual commands:
+
+```bash
+cd lament-scrapper
+bun run dev
+```
+
+See [Scraper Architecture](/docs/scraper/architecture) for details on scraper commands.
+
+## Full Stack Development
+
+To run the full stack locally, start the API and frontend in separate terminals:
+
+**Terminal 1 — API:**
+```bash
+cd lament-api && bun run dev
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd lament && bun run dev
+```
+
+Ensure the frontend's `.env` file points to the local API URL.
