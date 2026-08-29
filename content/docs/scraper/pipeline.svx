@@ -1,0 +1,76 @@
+---
+title: Pipeline
+description: Detailed scraper pipeline processing steps.
+section: Scraper
+order: 3
+---
+
+## Input Formats
+
+The scraper accepts input as:
+
+- **CSV file** — Bulk import with columns for track name, artist, etc.
+- **Direct Spotify URLs** — Individual track or playlist URLs
+- **Search queries** — Text search via Spotify API
+
+## Processing Steps
+
+### 1. Metadata Fetch
+
+Query Spotify API for track metadata. Extract:
+- Track title and duration
+- Album information and cover art URL
+- Artist details
+- Spotify track ID for deduplication
+
+### 2. Audio Download
+
+Using `yt-dlp`:
+- Search YouTube for matching audio
+- Download best quality audio stream
+- Handle rate limiting and retries
+
+### 3. Audio Processing
+
+Convert downloaded audio to HLS format:
+- Generate `.m3u8` playlist manifest
+- Split into `.ts` segments
+- Set appropriate segment duration
+
+### 4. Image Processing
+
+Using `sharp`:
+- Download cover art from best available source
+- Resize to standard dimensions
+- Convert to WebP for optimal file size
+- Generate multiple sizes if needed
+
+### 5. Lyrics Fetch
+
+Query Genius API:
+- Match track by title and artist
+- Extract lyrics content
+- Store with language and variant metadata
+
+### 6. Upload
+
+Upload processed files to Cloudflare R2:
+- HLS segments and manifest
+- Cover art images
+- Artist images
+
+### 7. Database Insert
+
+Insert metadata into LibSQL:
+- Create artist record (if new)
+- Create album record (if new)
+- Create track record with all metadata
+- Link lyrics, categories, and relationships
+
+## Error Handling
+
+The scraper logs failures and continues processing remaining items. Failed items can be retried with:
+
+```bash
+bun run repair
+```
