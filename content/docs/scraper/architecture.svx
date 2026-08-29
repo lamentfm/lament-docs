@@ -1,0 +1,59 @@
+---
+title: Scraper Architecture
+description: How the Lament scraper pipeline works.
+section: Scraper
+order: 1
+---
+
+## Overview
+
+The scraper (`lament-scrapper`) is a Node.js CLI tool that automates music ingestion. It orchestrates multiple external services to build the Lament music library.
+
+## Pipeline
+
+```
+Input (CSV / Spotify URL / Search query)
+        │
+        ▼
+1. Spotify API ──► Fetch metadata (track, album, artist)
+        │
+        ▼
+2. YouTube Search ──► Find matching audio
+        │
+        ▼
+3. yt-dlp ──► Download audio
+        │
+        ▼
+4. FFmpeg ──► Convert to HLS (m3u8 + ts segments)
+        │
+        ▼
+5. Sharp ──► Process cover art (resize, WebP)
+        │
+        ▼
+6. Genius ──► Fetch lyrics
+        │
+        ▼
+7. R2 Upload ──► Store audio + images
+        │
+        ▼
+8. LibSQL ──► Insert metadata
+```
+
+## Entry Points
+
+The main entry point is `src/index.ts`. The scraper can be run in different modes:
+
+```bash
+# Full scrape from CSV input
+bun run dev
+
+# Individual scripts
+bun run backup        # Backup database
+bun run restore       # Restore from backup
+bun run reconcile     # Reconcile DB with R2
+bun run repair        # Repair metadata
+```
+
+## Anti-Duplication
+
+Tracks have an `original_id` field (Spotify ID or YouTube ID) marked as `UNIQUE` to prevent duplicate entries.
