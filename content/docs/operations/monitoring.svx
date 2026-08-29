@@ -1,0 +1,35 @@
+---
+title: Monitoring
+description: Monitoring Lament services.
+section: Operations
+order: 1
+---
+
+## Health Checks
+
+The API provides health and ping endpoints:
+
+```
+GET /health    → { "s": 1, "runtime": "edge" }
+GET /ping      → { "pong": true, "ts": 1234567890 }
+```
+
+## API Status
+
+The root endpoint provides system status:
+
+```
+GET /          → { "name": "lament-api", "version": "1.2.0", "status": "operational" }
+```
+
+When maintenance mode is active, the status changes to `"maintenance"` with a description.
+
+## Maintenance Status
+
+Check maintenance state:
+
+```
+GET /maintenance
+```
+
+Returns the maintenance state for both the API and frontend services.
