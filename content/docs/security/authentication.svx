@@ -1,0 +1,55 @@
+---
+title: Authentication
+description: Authentication mechanisms in Lament.
+section: Security
+order: 1
+---
+
+## API Authentication
+
+The Lament API uses **Master Key** authentication. All non-public endpoints require the `X-Master-Key` or `x-api-key` header.
+
+### Public Endpoints (No Auth)
+
+These paths are accessible without authentication:
+
+- `GET /` — API info
+- `GET /health` — Health check
+- `GET /ping` — Ping
+- `GET /maintenance` — Maintenance status
+- `GET /stream/*` — Audio streaming
+- `GET /images/*` — Image serving
+
+### Protected Endpoints
+
+All other endpoints require authentication:
+
+```bash
+curl -H "X-Master-Key: your_master_key" \
+  https://api.lament.rynds.my.id/tracks
+```
+
+### Master-Only Endpoints
+
+Some endpoints require master-level access (via `MasterOnly` middleware):
+
+- Client management (`/clients`)
+- Playlist management (`/playlists`)
+- Music upload (`POST /music`)
+- Image refresh (`/refresh-image/*`)
+
+## Frontend Proxy Authentication
+
+The SvelteKit frontend injects the API key server-side. The browser never sees the master key:
+
+```
+Browser → SvelteKit Server → [Injects X-Master-Key] → Hono API
+```
+
+## Client API Keys
+
+The `clients` table stores API keys with:
+- `key_hash` — Bcrypt-hashed API key
+- `is_active` — Whether the key is enabled
+- `name` — Client name
+- `contact` — Contact information
