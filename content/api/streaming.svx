@@ -1,0 +1,66 @@
+---
+title: Streaming
+description: HLS audio streaming endpoints.
+section: Streaming
+order: 7
+method: GET
+endpoint: /stream/:id/playlist.m3u8
+---
+
+## Get HLS Playlist
+
+```
+GET /stream/:id/playlist.m3u8
+```
+
+Returns the HLS manifest file for a track. No authentication required.
+
+### Path Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `id` | string | Track ID |
+
+### Response
+
+Returns `application/vnd.apple.mpegurl` content:
+
+```
+#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXTINF:10.0,
+segment-000.ts
+#EXTINF:10.0,
+segment-001.ts
+...
+#EXT-X-ENDLIST
+```
+
+## Get Audio Segment
+
+```
+GET /stream/:id/:segment
+```
+
+Returns an individual HLS audio segment. No authentication required.
+
+### Path Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `id` | string | Track ID |
+| `segment` | string | Segment filename (e.g., `segment-000.ts`) |
+
+### Response
+
+Returns `video/mp2t` binary data.
+
+## Usage with HLS.js
+
+```javascript
+import Hls from 'hls.js';
+
+const hls = new Hls();
+hls.loadSource('/stream/track-uuid/playlist.m3u8');
+hls.attachMedia(audioElement);
+```
