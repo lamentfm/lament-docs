@@ -1,0 +1,44 @@
+---
+title: Cache
+description: Caching strategies in Lament.
+section: Infrastructure
+order: 3
+---
+
+## Overview
+
+Lament uses a multi-tiered caching strategy:
+
+1. **LRU in-memory cache** — Server-side cache in the API
+2. **HTTP cache headers** — Browser and CDN caching
+3. **Client-side cache** — In-memory cache in the frontend
+
+## API Cache
+
+The API uses `lru-cache` for in-memory caching of frequently accessed data:
+
+```typescript
+import { LRUCache } from 'lru-cache';
+
+const cache = new LRUCache<string, unknown>({
+  max: 500,
+  ttl: 1000 * 60 * 5 // 5 minutes
+});
+```
+
+## Cache Headers
+
+The `cacheHeaders` middleware applies cache-control headers to public endpoints:
+
+```typescript
+app.use('/tracks/*', cacheHeaders);
+app.use('/artists/*', cacheHeaders);
+app.use('/albums/*', cacheHeaders);
+app.use('/playlists/*', cacheHeaders);
+app.use('/search', cacheHeaders);
+app.use('/categories', cacheHeaders);
+```
+
+## Frontend Cache
+
+The SvelteKit frontend implements client-side caching in `src/lib/api.ts` with custom TTLs per endpoint to prevent redundant network requests.
