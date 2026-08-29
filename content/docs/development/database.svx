@@ -1,0 +1,82 @@
+---
+title: Database
+description: Database schema and operations in Lament.
+section: Development
+order: 4
+---
+
+## Database Engine
+
+Lament uses **LibSQL** hosted on **Turso** for its database. The client library is `@libsql/client`.
+
+## Schema
+
+The database schema is defined in `schema.sql`:
+
+### Core Tables
+
+**`artists`** — Music artist records.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | TEXT PK | UUID |
+| `name` | TEXT | Artist name |
+| `slug` | TEXT UNIQUE | URL slug |
+| `image_url` | TEXT | Artist image URL |
+| `image_source` | TEXT | Image provider |
+| `created_at` | TEXT | Timestamp |
+
+**`albums`** — Album records linked to artists.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | TEXT PK | UUID |
+| `artist_id` | TEXT FK | Reference to artists |
+| `title` | TEXT | Album title |
+| `slug` | TEXT | URL slug |
+| `cover_url` | TEXT | Cover image URL |
+| `year` | INTEGER | Release year |
+| `type` | TEXT | Album type |
+
+**`tracks`** — Individual music tracks.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | TEXT PK | UUID |
+| `artist_id` | TEXT FK | Reference to artists |
+| `album_id` | TEXT FK | Reference to albums |
+| `title` | TEXT | Track title |
+| `audio_url` | TEXT | HLS playlist URL |
+| `duration` | INTEGER | Duration in seconds |
+| `source` | TEXT | Audio source (default: youtube) |
+| `original_id` | TEXT UNIQUE | Spotify/YouTube ID for dedup |
+
+**`lyrics`** — Lyrics with language and variant support.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | TEXT PK | UUID |
+| `track_id` | TEXT FK | Reference to tracks |
+| `language` | TEXT | Language code (en, id, jp) |
+| `variant` | TEXT | original, translated, romanized, synced |
+| `content` | TEXT | Lyrics content |
+
+### Relationship Tables
+
+- **`track_categories`** — Many-to-many: tracks ↔ categories
+- **`track_artists`** — Many-to-many: tracks ↔ artists (for features/collaborations)
+
+### System Tables
+
+- **`clients`** — API client keys with `key_hash` and `is_active` status
+- **`requests`** — User song request queue with `status` tracking (pending/done/rejected)
+- **`maintenance`** — System maintenance state
+
+## Migrations
+
+Run migrations with:
+
+```bash
+cd lament-api
+bun run db:push
+```
