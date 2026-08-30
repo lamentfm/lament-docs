@@ -1,47 +1,73 @@
 ---
 title: Applications
-description: Overview of each application in the Lament ecosystem.
+description: Deep dive into the responsibilities and internals of each application in the Lament ecosystem.
 section: Architecture
 order: 2
 ---
 
-## Frontend Client (`lament`)
+## 1. Web Frontend Client (`lament`)
 
-The main web client built with **SvelteKit** and **Svelte 5**.
+The primary web experience for Lament listeners, built with **SvelteKit** and **Svelte 5**.
 
-- **SSR & Routing** — SvelteKit handles server-side rendering and page routing.
-- **Proxy Endpoints** — Server-side `+server.ts` files proxy API requests, injecting credentials.
-- **Audio Playback** — `HLS.js` handles adaptive HLS audio streaming in the browser.
-- **State Management** — Svelte 5 Runes (`$state`, `$derived`, `$props`) for reactive state.
-- **Styling** — Tailwind CSS v4 with custom CSS variables for theming.
-- **Icons** — Lucide Svelte for consistent iconography.
+### Key Features
+* **Server-Side Rendering (SSR)**: Renders pages on the server for immediate first contentful paint (FCP) and optimal SEO.
+* **Server Proxy Endpoints (`+server.ts`)**: Acts as a security shield between client browsers and `lament-api`. Requests to `/api/*` are handled by server endpoints that inject API keys server-side.
+* **Reactive Audio State**: Uses Svelte 5 Runes (`$state`, `$derived`, `$props`) to synchronize audio playback, progress bars, volume, and lyrics across views.
+* **HLS Playback**: Integrates `HLS.js` for adaptive bitrate streaming, gapless track transitions, and buffer management.
 
-## API Server (`lament-api`)
+---
 
-The backend API built with **Hono** and deployed on **Cloudflare Workers**.
+## 2. Edge REST API (`lament-api`)
 
-- **Hono Framework** — Lightweight, edge-optimized web framework.
-- **Database** — LibSQL via `@libsql/client` (Turso hosted).
-- **Object Storage** — AWS SDK S3-compatible client for Cloudflare R2.
-- **Cache** — LRU in-memory cache with cache-control headers.
-- **Auth** — Master key authentication via `X-Master-Key` header.
-- **Maintenance Mode** — Database-driven maintenance state with middleware bypass.
+The core engine providing REST endpoints for all clients, built with **Hono** and deployed on **Cloudflare Workers**.
 
-## Scraper (`lament-scrapper`)
+### Key Features
+* **Dual-Layer Security Middleware**: Enforces `x-api-key` / `Authorization: Bearer` for client application requests and `X-Master-Key` for administrative actions.
+* **Edge Database Access**: Connects to Turso LibSQL database using `@libsql/client` with optimized connection pooling.
+* **HLS Stream Controller**: Serves HLS playlist manifests (`/stream/:id/playlist.m3u8`) and validates client authorization.
+* **Dynamic Maintenance Circuit Breaker**: Database-driven maintenance flag that instantly blocks non-administrative traffic with HTTP 503 status without redeploying code.
 
-The data ingestion pipeline:
+---
 
-- **Spotify** — Fetches track, album, and artist metadata using `spotify-web-api-node`.
-- **YouTube** — Downloads audio using `yt-dlp-wrap`.
-- **Last.fm** — Fetches artist images and additional metadata.
-- **Genius** — Fetches song lyrics via `genius-lyrics`.
-- **Image Processing** — `sharp` for resizing and WebP conversion.
-- **Upload** — Pushes processed audio (HLS) and images to Cloudflare R2.
+## 3. Ingestion & Scraper Pipeline (`lament-scrapper`)
 
-## Mobile Client (`lament-mobile`)
+The backend worker script and CLI tool responsible for catalog population and media enrichment.
 
-A Flutter/Dart mobile client for iOS and Android.
+### Key Features
+* **Metadata Extraction**: Searches Spotify and iTunes APIs for high-accuracy metadata (track titles, release years, ISRC, genre tags).
+* **Direct Audio Rip**: Downloads highest quality Opus or AAC streams via `yt-dlp` without secondary re-encoding.
+* **Visual Asset Pipeline**: Scrapes high-resolution artist photography from Last.fm (`artist.getinfo`) and Deezer, processing them into WebP variants (`small`, `medium`, `large`, `original`) via `sharp`.
+* **LRC Lyric Parser**: Retrieves raw LRC text from Genius / synced lyric providers and converts them into structured JSON arrays with millisecond timestamp markers.
 
-## Admin Dashboard (`lament-admin`)
+---
 
-Administrative interface for managing content, users, and system status.
+## 4. Mobile Client (`lament-mobile`)
+
+Native mobile application for iOS and Android built with **Flutter** and **Dart**.
+
+### Key Features
+* **Native Audio Service**: Interfaces with OS background audio controllers (iOS MPNowPlayingInfoCenter / Android MediaSession).
+* **Direct API Consumption**: Sends `x-api-key` headers for authorized catalog browsing.
+* **Offline Caching**: Caches cover artwork and LRC lyric files locally for smooth offline viewing.
+
+---
+
+## 5. Administration Portal (`lament-admin`)
+
+Internal management console for content moderators and system administrators.
+
+### Key Features
+* **Client Key Management**: Generates and revokes client API keys with customizable clearance levels.
+* **Cache & Artwork Refresh**: Triggers manual scraper jobs to re-fetch broken cover art or outdated metadata.
+* **Maintenance Control**: Toggles global maintenance mode flags for `lament` or `lament-api`.
+
+---
+
+## 6. Lyric Forced-Alignment Service (`calibrate`)
+
+Specialized Python worker service responsible for calibrating out-of-sync LRC lyric timestamp markers against HLS audio streams.
+
+### Key Features
+* **Whisper Audio Alignment**: Uses `stable-whisper` forced-alignment AI models to analyze audio wave files downloaded from Cloudflare CDN.
+* **Active Development Status**: Undergoing continuous prompt engineering and timestamp threshold tuning to correct model misalignment edge cases.
+* **Database Pipeline Integration**: Queries raw un-synced lyrics from Turso LibSQL database and updates target track rows with calibrated LRC timestamp tags.
