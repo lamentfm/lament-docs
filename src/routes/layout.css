@@ -426,3 +426,59 @@ img[loading='lazy'] {
 		background-position: -200% 0;
 	}
 }
+
+/* Global Mermaid Diagram Theme Adaptation */
+.mermaid-container {
+	background-color: var(--color-surface-1) !important;
+	border-color: var(--color-surface-2) !important;
+}
+
+.mermaid-container svg {
+	max-width: 100% !important;
+	height: auto !important;
+}
+
+.mermaid-container .node rect,
+.mermaid-container .node polygon,
+.mermaid-container .node circle,
+.mermaid-container .node path,
+.mermaid-container rect.basic,
+.mermaid-container .label-container {
+	fill: var(--color-surface-2) !important;
+	stroke: var(--color-accent) !important;
+	stroke-width: 1.5px !important;
+}
+
+.mermaid-container .node .label text,
+.mermaid-container .node text,
+.mermaid-container .label text,
+.mermaid-container text,
+.mermaid-container span {
+	fill: var(--color-text-primary) !important;
+	color: var(--color-text-primary) !important;
+	font-family: var(--font-sans) !important;
+	font-weight: 500 !important;
+}
+
+.mermaid-container .edgePath .path,
+.mermaid-container .flowchart-link {
+	stroke: var(--color-accent) !important;
+	stroke-width: 2px !important;
+}
+
+.mermaid-container .marker,
+.mermaid-container #mermaid-svg-container .marker {
+	fill: var(--color-accent) !important;
+	stroke: var(--color-accent) !important;
+}
+
+.mermaid-container .edgeLabel rect {
+	fill: var(--color-surface-0) !important;
+	opacity: 0.95 !important;
+}
+
+.mermaid-container .edgeLabel text,
+.mermaid-container .edgeLabel span {
+	fill: var(--color-text-secondary) !important;
+	color: var(--color-text-secondary) !important;
+}
