@@ -1,0 +1,45 @@
+---
+title: "v1.3.1 - Hierarchical Scoring Recommendation Engine & Spotify Binary Metadata Purity"
+date: "2026-08-30"
+version: "v1.3.1"
+---
+
+# v1.3.1 - Hierarchical Scoring Recommendation Engine & Spotify Binary Metadata Purity
+
+> [!IMPORTANT]
+> **Patch Release**: Overhauling the auto-play recommendation system with a multi-attribute SQL scoring matrix, resolving playback loop bugs, performing a 100% binary image buffer audit across all database artists and albums, and enforcing UI empty-state guards.
+
+---
+
+## 1. Multi-Attribute Scoring Recommendation Engine (`lament-api`)
+
+Replaced the rigid `JOIN track_categories` filter with a dynamic **Hierarchical Scoring Matrix** computed on the fly for every recommendation request:
+
+- **Mathematical Score Formula**: `score = (same_categories * 3.0) + (same_artist * 2.0) + (same_album * 2.0) + (MIN(play_count, 100) * 0.05)`
+- **Category Graceful Fallback**: Tracks without assigned categories are no longer excluded or blocked. They seamlessly match via artist or album correlation, or fall back to random discovery.
+- **Session Queue Exclusion (`exclude`)**: Accepts comma-separated track IDs via `?exclude=` query parameter to purge played/queued tracks from auto-play suggestions.
+- **Dynamic Tie-Breaker**: Results strictly ordered via `ORDER BY score DESC, RANDOM()`, resolving track repetition and auto-play loops.
+
+---
+
+## 2. Player Store Auto-Play & API Fixes (`lament`)
+
+- **Auto-Play Radio Pipeline (`player.svelte.ts`)**: Upgraded `loadMoreTracks()` to request smart track recommendations for `currentTrack` passing currently queued IDs via `exclude`.
+- **Random Route Fix (`api/tracks/+server.ts`)**: Corrected `random=true` parameter handling which previously misrouted to top trending tracks.
+- **Proxy Endpoint (`api/tracks/[id]/recommendations`)**: Added dedicated frontend API route proxying recommendation requests server-to-server to backend API.
+
+---
+
+## 3. 100% Spotify Binary Image Buffer Audit (`lament-scrapper`)
+
+Audited all database media files by downloading binary image buffers from Cloudflare R2 CDN and performing byte-level buffer comparisons against official Spotify API image buffers:
+
+- **Artist Profile Photography**: Audited 213 artists. Verified 205 authentic matches. Repaired 5 mismatched profiles (including Bleachers and Grey) by purging legacy artwork and 3 WebP variants from R2 before uploading official Spotify profile photography.
+- **Album Cover Artwork**: Audited 250 albums. Verified 247 authentic covers. Repaired 3 mismatched album covers (*Cinta Luar Biasa*, *Hold On*, *When the Sun Goes Down*) and corrected album primary artist ownership for *Romeo*.
+- **Storage Hygiene Guarantee**: Every asset replacement purges all 4 image variants (`.jpg`, `_large.webp`, `_medium.webp`, `_small.webp`) from Cloudflare R2 to prevent storage bloat.
+
+---
+
+## 4. UI Empty-State Guards (`lament`)
+
+- **Empty Albums Guard**: Added `{#if albums && albums.length > 0}` template wrappers in `artist/[id]/+page.svelte` and `+page.svelte` to hide the Albums section header whenever an artist has 0 albums.
