@@ -1,51 +1,80 @@
 ---
-title: Deployment
-description: Deploying Lament services to production.
+title: Deployment Guide
+description: Production deployment procedures for SvelteKit frontend, Hono edge API, scraper worker, and calibrate service.
 section: Infrastructure
 order: 4
 ---
 
-## API Deployment
+## Deployment Target Summary
 
-The API deploys to **Cloudflare Workers**:
+| Service | Target Environment | Deployment Tool / Runtime |
+| --- | --- | --- |
+| `lament` | Vercel / Cloudflare Pages / Node Server | `bun run build` / `@sveltejs/adapter-auto` |
+| `lament-api` | Cloudflare Workers | `bunx wrangler deploy` |
+| `lament-docs` | Vercel / Cloudflare Pages | `bun run build` |
+| `lament-scrapper` | Local Worker / GitHub Actions Runner | CLI script execution via `bun` |
+| `calibrate` | Python Worker / GPU Environment | `python align_lyrics.py` / `batch_align.py` |
+
+---
+
+## 1. Deploying Backend API (`lament-api`)
+
+Ensure Cloudflare Wrangler CLI is authenticated:
 
 ```bash
 cd lament-api
+bunx wrangler login
 bunx wrangler deploy
 ```
 
-Secrets are configured via Wrangler:
+Verify production health status:
 
 ```bash
-bunx wrangler secret put MASTER_KEY
-bunx wrangler secret put TURSO_DATABASE_URL
-bunx wrangler secret put TURSO_AUTH_TOKEN
+curl https://api.lament.rynds.my.id/health
 ```
 
-## Frontend Deployment
+---
 
-The SvelteKit frontend uses `@sveltejs/adapter-cloudflare` for Cloudflare Pages:
+## 2. Deploying Web Frontend (`lament`)
+
+Build production static and SSR assets:
 
 ```bash
 cd lament
 bun run build
 ```
 
-The build output is deployed to Cloudflare Pages via Git integration or manual upload.
+Deploy build output (`.svelte-kit/output`) to your target host.
 
-## Documentation Deployment
+---
 
-The documentation site uses `@sveltejs/adapter-auto`:
+## 3. Deploying Documentation (`lament-docs`)
 
 ```bash
 cd lament-docs
 bun run build
 ```
 
-## Database
+---
 
-The LibSQL database is hosted on **Turso**. No separate deployment needed — it's a managed service.
+## 4. Running Lyric Calibration Service (`calibrate`)
 
-## CI/CD
+`calibrate` is a specialized Python service that uses `stable-whisper` AI forced-alignment models to re-sync misaligned LRC lyric timestamps against HLS audio streams.
 
-GitHub Actions workflows in `.github/` automate builds and deployments for each repository.
+> [!NOTE]
+> `calibrate` is currently in **active development**. Automated Whisper alignment models are continuously undergoing prompt engineering and timestamp threshold tuning to fix out-of-sync markers.
+
+### Execution Commands
+
+```bash
+cd calibrate
+
+# Activate virtual environment
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Calibrate a single track by ID
+python align_lyrics.py --track-id <track_id>
+
+# Execute batch calibration job across all unsynced database tracks
+python batch_align.py
+```
