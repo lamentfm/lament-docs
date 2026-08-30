@@ -1,58 +1,83 @@
 ---
 title: Lyrics
-description: Lyrics retrieval and management.
+description: Synced and plain LRC lyric parsing and management endpoints.
 section: Lyrics
-order: 6
+order: 5
 method: GET
 endpoint: /tracks/:id/lyrics
 ---
 
 ## Get Lyrics by Track
 
-```
-GET /tracks/:id/lyrics
+```http
+GET /tracks/:id/lyrics?variant=synced
 ```
 
-Returns all lyrics variants for a track.
+Returns parsed lines of synchronized LRC lyrics for timed audio playback in clients.
 
-### Response
+### Query Parameters
+
+| Parameter | Type | Default | Options | Description |
+| --- | --- | --- | --- | --- |
+| `variant` | string | `original` | `original`, `synced`, `translated`, `romanized` | Variant of lyrics to fetch |
+
+### Response (`200 OK`)
 
 ```json
 {
-  "data": [
+  "variant": "synced",
+  "synced": true,
+  "lines": [
     {
-      "id": "uuid",
-      "track_id": "uuid",
-      "language": "en",
-      "variant": "original",
-      "content": "Lyrics text here..."
+      "time": 12.4,
+      "text": "Di suatu malam yang sunyi..."
+    },
+    {
+      "time": 16.8,
+      "text": "Kuteringat kata-katamu..."
+    },
+    {
+      "time": 22.1,
+      "text": "Yang selalu membuatku tersenyum..."
+    },
+    {
+      "time": 28.5,
+      "text": "Jatuh suka pada tatapan pertama..."
     }
   ]
 }
 ```
 
-## Add Lyrics
+---
 
-```
+## Add Lyric Variant (Master Only)
+
+```http
 POST /tracks/:id/lyrics
 ```
 
-Add a new lyrics variant. Requires authentication.
+### Headers
+
+- `X-Master-Key`: `<your_master_secret>`
+- `Content-Type`: `application/json`
 
 ### Request Body
 
 ```json
 {
-  "language": "en",
-  "variant": "translated",
-  "content": "Translated lyrics..."
+  "language": "id",
+  "variant": "synced",
+  "content": "[00:12.40] Di suatu malam yang sunyi...\n[00:16.80] Kuteringat kata-katamu...\n[00:22.10] Yang selalu membuatku tersenyum...\n[00:28.50] Jatuh suka pada tatapan pertama..."
 }
 ```
 
-## Delete Lyrics
+### Response (`201 Created`)
 
+```json
+{
+  "id": "lyr_9f8e7d",
+  "track_id": "trk_7f9a2b1c",
+  "variant": "synced",
+  "synced": true
+}
 ```
-DELETE /lyrics/:lyricId
-```
-
-Delete a lyrics entry. Requires authentication.
