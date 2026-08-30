@@ -1,52 +1,38 @@
 ---
 title: Overview
-description: High-level overview of the Lament architecture and ecosystem.
+description: Comprehensive architectural breakdown of the Lament multi-repository audio streaming platform.
 section: Architecture
 order: 1
 ---
 
-## What is Lament?
+## Ecosystem Overview
 
-Lament is a free, self-hosted music streaming platform consisting of multiple services that work together to scrape, process, store, and deliver music content.
+Lament is a high-performance music streaming ecosystem engineered for zero-latency audio playback, automated metadata extraction, and strict access security. 
 
-## Ecosystem
+Rather than a monolithic codebase, Lament is decoupled into specialized repositories under the **lamentfm** organization:
 
-The Lament project is organized under the **lamentfm** GitHub organization with these repositories:
+| Repository | Role | Tech Stack | Key Functionality |
+| --- | --- | --- | --- |
+| `lament` | Web Frontend Client | SvelteKit, Svelte 5, Tailwind CSS v4, HLS.js | SSR, reactive player, glassmorphism UI, server-side API proxying |
+| `lament-api` | Edge REST Backend | Hono, Cloudflare Workers, Turso LibSQL, R2 | Dual-layer auth, ETag caching, HLS manifests, maintenance flags |
+| `lament-scrapper` | Ingestion Pipeline | Node.js, Bun, `yt-dlp`, `sharp`, Spotify API, Last.fm, Deezer | Audio extraction without re-encoding, image optimization, LRC parsing |
+| `lament-docs` | Documentation App | SvelteKit, Svelte 5, MDsveX | Complete developer reference, architecture specs, and API contracts |
+| `lament-mobile` | Mobile Client | Flutter, Dart | Native iOS and Android player with offline cache support |
+| `lament-admin` | Management Portal | SvelteKit, Tailwind CSS | Content management, client key administration, and analytics |
+| `calibrate` | Lyric Alignment Tool | Python, `stable-whisper`, FFmpeg | Forced-alignment AI model for re-syncing misaligned LRC lyrics |
 
-| Repository | Description | Stack |
-| --- | --- | --- |
-| `lament` | Web client / frontend | SvelteKit, Tailwind CSS v4, HLS.js |
-| `lament-api` | Core API server | Hono, Cloudflare Workers |
-| `lament-scrapper` | Music metadata scraper & audio downloader | Node.js, Spotify API, yt-dlp |
-| `lament-docs` | Documentation site | SvelteKit, mdsvex |
-| `lament-mobile` | Mobile client | Flutter / Dart |
-| `lament-admin` | Admin dashboard | — |
+---
 
-## Data Flow
+## Architectural Principles
 
-```
-Spotify / YouTube / Last.fm
-        │
-        ▼
-   lament-scrapper ──────► LibSQL (Turso)
-        │                      ▲
-        ▼                      │
-   Cloudflare R2           lament-api (Hono)
-   (HLS segments,              │
-    cover art)                  ▼
-                          lament (SvelteKit)
-                               │
-                               ▼
-                          Browser / Client
-```
+### 1. Zero Direct Backend Exposure (Proxy Architecture)
+The browser and client apps never communicate directly with the core database or administrative endpoints. All web requests are routed through SvelteKit server-side proxy routes (`+server.ts`), which inject client authentication credentials (`x-api-key`) and sanitize response headers.
 
-1. **Scraper** fetches metadata from Spotify, downloads audio from YouTube, fetches lyrics from Genius, and uploads everything to R2 storage and LibSQL.
-2. **API** serves data from LibSQL and streams audio from R2 via HLS.
-3. **Frontend** proxies API requests through SvelteKit server endpoints, keeping credentials hidden from the browser.
+### 2. Native Quality Lossless Extraction
+The scraper pipeline extracts raw audio streams (`.m4a` AAC / Opus `.webm`) directly from YouTube sources via `yt-dlp`. Audio is wrapped in native containers without lossy re-encoding to prevent transcoding generational loss.
 
-## Key Design Decisions
+### 3. Edge-First HLS Delivery
+Audio files are split into HLS segments (`.ts`) and manifests (`.m3u8`) hosted on Cloudflare R2 object storage (`cdn.lament.rynds.my.id`). Direct unauthorized hotlinking is blocked at the Cloudflare edge via WAF Referer validation rules.
 
-- **Proxy architecture** — The frontend never communicates directly with the backend API. All requests go through SvelteKit server routes that inject authentication.
-- **Edge deployment** — The API runs on Cloudflare Workers for global low-latency access.
-- **HLS streaming** — Audio is served as HLS segments for adaptive streaming rather than direct file downloads.
-- **Decoupled services** — Each component is independently deployable and has its own repository.
+### 4. Distributed State & Caching
+Metadata resides in Turso LibSQL (SQLite at the edge), while high-frequency read requests leverage LRU in-memory caches and HTTP ETag validation (`304 Not Modified`).
