@@ -1,56 +1,59 @@
 ---
 title: Requests
-description: Song request submission and tracking.
+description: Track request queue for users to submit missing music for scraper ingestion.
 section: Requests
 order: 8
 method: GET
 endpoint: /requests
 ---
 
-## List Requests
+## List Song Requests
 
+```http
+GET /requests?status=pending
 ```
-GET /requests
-```
 
-Returns all song requests with their status.
+### Headers
 
-### Response
+- `x-api-key`: `<your_client_api_key>` (or `Authorization: Bearer <key>`)
+
+### Response (`200 OK`)
 
 ```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "query": "Song name - Artist",
-      "status": "pending",
-      "metadata": null,
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "req_1a2b3c",
+    "query": "Pamungkas - To the Bone",
+    "status": "pending",
+    "metadata": "{\"requested_by\": \"user_456\"}",
+    "created_at": "2024-03-20T14:15:00Z"
+  }
+]
 ```
 
-## Submit Request
+---
 
-```
+## Submit Song Request
+
+```http
 POST /requests
 ```
-
-Submit a new song request.
 
 ### Request Body
 
 ```json
 {
-  "query": "Song name - Artist name"
+  "query": "Feast - Peradaban"
 }
 ```
 
-### Status Values
+### Response (`201 Created`)
 
-| Status | Description |
-| --- | --- |
-| `pending` | Request submitted, awaiting processing |
-| `done` | Request fulfilled, track added |
-| `rejected` | Request rejected |
+```json
+{
+  "id": "req_9f8e7d",
+  "query": "Feast - Peradaban",
+  "status": "pending",
+  "created_at": "2024-03-20T14:20:00Z"
+}
+```
