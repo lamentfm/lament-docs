@@ -1,29 +1,31 @@
 import mermaid from 'mermaid';
 
-function initMermaidTheme() {
+function getMermaidConfig() {
 	const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
-	mermaid.initialize({
+	return {
 		startOnLoad: false,
-		theme: isLight ? 'neutral' : 'dark',
+		theme: 'base',
 		themeVariables: {
 			darkMode: !isLight,
-			background: isLight ? '#f2f0ec' : '#101012',
-			primaryColor: isLight ? '#c07168' : '#d4847a',
-			primaryTextColor: isLight ? '#2b2926' : '#f2f0ec',
-			primaryBorderColor: isLight ? '#e3dfd8' : '#282830',
+			background: 'transparent',
+			mainBkg: isLight ? '#eae5dc' : '#1e1e24',
+			nodeBorder: isLight ? '#c07168' : '#d4847a',
+			nodeTextColor: isLight ? '#2b2926' : '#f2f0ec',
 			lineColor: isLight ? '#c07168' : '#d4847a',
-			secondaryColor: isLight ? '#ece9e4' : '#16161a',
-			tertiaryColor: isLight ? '#f2f0ec' : '#101012'
+			textColor: isLight ? '#2b2926' : '#f2f0ec',
+			labelBackground: isLight ? '#dfd9cf' : '#282832',
+			clusterBkg: isLight ? '#f2ede4' : '#141418',
+			clusterBorder: isLight ? '#d6cfc4' : '#2e2e36',
+			titleColor: isLight ? '#2b2926' : '#f2f0ec',
+			edgeLabelBackground: isLight ? '#eae5dc' : '#1e1e24'
 		},
 		securityLevel: 'loose'
-	});
+	};
 }
 
 export function renderMermaid(node: HTMLElement) {
 	if (typeof window === 'undefined') return;
-
-	initMermaidTheme();
 
 	async function renderDiagrams() {
 		const codeBlocks = node.querySelectorAll<HTMLElement>('pre.language-mermaid, pre > code.language-mermaid');
@@ -38,6 +40,7 @@ export function renderMermaid(node: HTMLElement) {
 			const id = `mermaid-diagram-${Date.now()}-${idCounter++}`;
 
 			try {
+				mermaid.initialize(getMermaidConfig() as any);
 				const { svg } = await mermaid.render(id, text);
 				const container = document.createElement('div');
 				container.className =
