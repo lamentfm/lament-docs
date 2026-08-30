@@ -7,12 +7,14 @@
 	import MobileNav from '$lib/components/layout/MobileNav.svelte';
 	import SystemStatus from '$lib/components/layout/SystemStatus.svelte';
 	import type { NavItem } from '$lib/types/nav';
-	import { IconBrandGithub } from '@tabler/icons-svelte';
+	// import { IconBrandGithub } from '@tabler/icons-svelte';
+	import { resolve } from '$app/paths';
 
 	const navLeft: NavItem[] = [
 		{ label: 'Home', href: '/' },
 		{ label: 'Docs', href: '/docs' },
-		{ label: 'API', href: '/api' }
+		{ label: 'API', href: '/api' },
+		{ label: 'Design', href: '/design' }
 	];
 
 	const changeLogFiles = import.meta.glob('/content/changelog/*.svx', { eager: true });
@@ -33,23 +35,25 @@
 	}
 </script>
 
-<header class="header-fixed sticky top-0 z-50 w-full glass-nav border-b border-surface-2/50">
-	<nav class="mx-auto flex h-[var(--mobile-nav-height)] md:h-16 max-w-[90rem] items-center justify-between gap-4 px-4 relative">
+<header class="header-fixed glass-nav sticky top-0 z-50 w-full border-b border-surface-2/50">
+	<nav
+		class="relative mx-auto flex h-(--mobile-nav-height) max-w-360 items-center justify-between gap-4 px-4 md:h-16"
+	>
 		<!-- Left: Logo + Version -->
 		<div class="flex items-center gap-3">
 			<button
-				class="flex items-center justify-center rounded-[var(--radius-sm)] p-1 text-text-muted hover:text-text-secondary md:hidden"
+				class="flex items-center justify-center rounded-sm p-1 text-text-muted hover:text-text-secondary md:hidden"
 				onclick={() => (mobileNavOpen = true)}
 				aria-label="Open navigation"
 			>
 				<Menu size={20} />
 			</button>
-			<a href="/" class="flex items-center gap-3">
+			<a href={resolve('/')} class="flex items-center gap-3">
 				<Logo size="32px" class="text-accent" />
 			</a>
 			<div class="hidden h-5 w-px bg-surface-2 sm:block"></div>
 			<a
-				href="/changelog"
+				href={resolve('/changelog')}
 				class="hidden text-xs text-text-muted transition-colors hover:text-text-secondary sm:inline"
 			>
 				{lastVersion}
@@ -57,7 +61,7 @@
 		</div>
 
 		<!-- Center: Search -->
-		<div class="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center px-4">
+		<div class="absolute left-1/2 hidden -translate-x-1/2 items-center justify-center px-4 md:flex">
 			<CommandPalette />
 		</div>
 
@@ -66,19 +70,17 @@
 			<div class="hidden items-center gap-1 md:flex">
 				{#each navLeft as item (item.label)}
 					<a
-						href={item.href}
-						class="rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium transition-colors {isActive(
-							item.href
-						)
-							? 'text-text-primary bg-surface-1'
-							: 'text-text-muted hover:text-text-secondary hover:bg-surface-0'}"
+						href={resolve(item.href as "/")}
+						class="rounded-sm px-3 py-1.5 text-sm font-medium transition-colors {isActive(item.href)
+							? 'bg-surface-1 text-text-primary'
+							: 'text-text-muted hover:bg-surface-0 hover:text-text-secondary'}"
 					>
 						{item.label}
 					</a>
 				{/each}
 			</div>
 
-			<div class="hidden h-5 w-px bg-surface-3 md:block mx-2"></div>
+			<div class="mx-2 hidden h-5 w-px bg-surface-3 md:block"></div>
 
 			<ThemeToggle />
 			<SystemStatus />
