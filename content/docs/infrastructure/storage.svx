@@ -1,55 +1,43 @@
 ---
-title: Storage
-description: Object storage with Cloudflare R2.
+title: Storage Infrastructure
+description: Media storage architecture using Cloudflare R2 object storage for audio segments and WebP artwork.
 section: Infrastructure
 order: 2
 ---
 
-## Cloudflare R2
+## Cloudflare R2 Bucket Structure
 
-Lament uses **Cloudflare R2** (S3-compatible) for storing:
+Lament stores all binary media assets (HLS audio segments, `.m3u8` manifests, cover artwork, and artist photos) on **Cloudflare R2**. R2 provides S3 API compatibility with zero egress data charges.
 
-- **HLS audio segments** (`.m3u8` playlists and `.ts` segments)
-- **Cover artwork** (album covers, artist images)
-- **Processed images** (WebP conversions)
+---
 
-## Access
-
-R2 is accessed via the AWS SDK S3-compatible client:
-
-```typescript
-import { S3Client } from '@aws-sdk/client-s3';
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY
-  }
-});
-```
-
-## File Organization
+## Directory Key Conventions
 
 ```
-R2 bucket/
-├── audio/
-│   └── {track-id}/
-│       ├── playlist.m3u8
-│       ├── segment-000.ts
-│       ├── segment-001.ts
+lament-media/
+├── hls/
+│   └── <track_id>/
+│       ├── playlist.m3u8       # HLS manifest playlist file
+│       ├── segment0.ts         # MPEG-2 Transport Stream audio segment 0
+│       ├── segment1.ts         # Audio segment 1
 │       └── ...
 ├── covers/
-│   ├── tracks/
-│   ├── albums/
-│   └── artists/
+│   ├── <track_id>_small.webp   # 150x150 thumbnail image
+│   ├── <track_id>_medium.webp  # 400x400 medium image
+│   ├── <track_id>_large.webp   # 800x800 high-res cover
+│   └── <track_id>_original.webp# Original uncompressed cover
+└── artists/
+    ├── <artist_slug>.webp      # Artist profile picture
+    └── <artist_slug>_banner.webp # Artist page header banner
 ```
 
-## Image Processing
+---
 
-The scraper uses `sharp` for image processing before upload:
+## Image Variant Processing
 
-- Resize to standard dimensions
-- Convert to WebP format
-- Optimize file size
+When the scraper processes artwork, `sharp` generates WebP variants:
+
+- **Small (`_small.webp`)**: Optimized for playlist rows and search suggestions (150px width).
+- **Medium (`_medium.webp`)**: Optimized for mobile player views and album cards (400px width).
+- **Large (`_large.webp`)**: High-resolution image for desktop expanded view (800px width).
+- **Original (`_original.webp`)**: Direct uncompressed master artwork upload.
