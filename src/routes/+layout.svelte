@@ -17,7 +17,7 @@
 
 	const hideHeadrerRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
 
-	let shouldHidderHeader = $derived(hideHeadrerRoutes.includes(page.url.pathname));
+	let shouldHidderHeader = $derived(hideHeadrerRoutes.includes(page.url.pathname) || page.error);
 </script>
 
 <svelte:head>
@@ -28,7 +28,7 @@
 	<Header />
 {/if}
 
-<main>
+<main data-sveltekit-preload-data="hover">
 	{@render children()}
 </main>
 
