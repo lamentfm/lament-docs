@@ -1,62 +1,25 @@
 ---
-title: Troubleshooting
-description: General troubleshooting guide for Lament.
+title: System Troubleshooting
+description: Diagnosing API CORS errors, database connection failures, and media 404s.
 section: Operations
 order: 4
 ---
 
-## API Issues
+## Troubleshooting Guide
 
-### API returns 401 Unauthorized
+### 1. CORS Preflight Failures (`Access-Control-Allow-Origin`)
 
-Ensure the `X-Master-Key` header matches the `MASTER_KEY` environment variable.
+- **Symptom**: Browser throws CORS blocked error when requesting API endpoints.
+- **Cause**: Client domain is missing from `ALLOWED_ORIGINS` environment variable.
+- **Fix**: Update `ALLOWED_ORIGINS` in `lament-api` config (e.g. `ALLOWED_ORIGINS=https://lament.rynds.my.id,http://localhost:5173`).
 
-### API returns 503 Service Unavailable
+### 2. Audio Playback Blocked (`403 Forbidden` on `.ts` segments)
 
-The API is in maintenance mode. Check status:
+- **Symptom**: Player loads `.m3u8` manifest but fails to download `.ts` audio segments.
+- **Cause**: Request `http.referer` header is missing or blocked by Cloudflare WAF referer validation.
+- **Fix**: Ensure client domain is allowed in Cloudflare WAF WAF referer rule (e.g. `lament.rynds.my.id` or `localhost`).
 
-```bash
-curl https://api.lament.rynds.my.id/maintenance
-```
+### 3. Turso Database Connection Limit (`E_DB`)
 
-### Database connection failed
-
-Verify Turso credentials:
-- `TURSO_DATABASE_URL` — should be `libsql://your-db.turso.io`
-- `TURSO_AUTH_TOKEN` — valid authentication token
-
-## Frontend Issues
-
-### Blank page on load
-
-Check browser console for errors. Common causes:
-- API URL misconfigured in `.env`
-- CORS blocking requests
-- API is in maintenance mode
-
-### Audio not playing
-
-- Verify the track has HLS segments in R2
-- Check browser console for HLS.js errors
-- Ensure the stream endpoint is accessible
-
-## Build Issues
-
-### SvelteKit build fails
-
-```bash
-bun run check    # Type checking
-bun run build    # Full build
-```
-
-Common fixes:
-- Run `bunx svelte-kit sync` to regenerate types
-- Clear `.svelte-kit` directory and rebuild
-
-### Wrangler deployment fails
-
-Verify `wrangler.jsonc` configuration and that all secrets are set:
-
-```bash
-bunx wrangler secret list
-```
+- **Symptom**: API returns 500 error `E_DB`.
+- **Fix**: Ensure `TURSO_AUTH_TOKEN` is valid and database state is active.
