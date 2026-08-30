@@ -1,71 +1,74 @@
 ---
 title: API Development
-description: Developing and extending the Lament API.
+description: Extending controllers, routing, and middleware in the Hono edge backend.
 section: Development
 order: 3
 ---
 
-## Framework
+## Hono Framework Architecture
 
-The API uses **Hono**, a lightweight web framework optimized for edge runtimes.
+The API backend (`lament-api`) is constructed with **Hono**, designed for zero-overhead execution on Cloudflare Workers and Bun.
 
-## Route Structure
+---
 
-Routes are defined in `src/routes/edge-routes.ts` and follow this pattern:
+## Route Registration Pattern
+
+Routes are modularized in `src/routes/edge-routes.ts`. Controllers handle business logic:
 
 ```typescript
 import { Hono } from 'hono';
 import * as trackController from '../controllers/track.controller';
+import { MasterOnly } from '../middlewares/auth.middleware';
 
 const app = new Hono();
 
-// Public read endpoints
+// Public / Client Endpoints (Protected by authMiddleware)
 app.get('/tracks', trackController.listTracks);
+app.get('/tracks/count', trackController.countTracks);
+app.get('/tracks/random', trackController.getRandomTracks);
 app.get('/tracks/:id', trackController.getTrack);
 
-// Protected mutation endpoints
-app.post('/tracks', trackController.createTrack);
-app.put('/tracks/:id', trackController.updateTrack);
-app.delete('/tracks/:id', trackController.deleteTrack);
+// Master Administrative Endpoints (Protected by MasterOnly)
+app.post('/tracks', MasterOnly, trackController.createTrack);
+app.put('/tracks/:id', MasterOnly, trackController.updateTrack);
+app.delete('/tracks/:id', MasterOnly, trackController.deleteTrack);
 ```
 
-## Controllers
+---
 
-Controllers are in `src/controllers/` and handle request processing:
+## Controller Pattern
+
+Controllers process request parameters, query LibSQL database connections, apply cache transformations, and return structured JSON responses:
 
 ```typescript
-export const listTracks = async (c: Context) => {
-  const offset = parseInt(c.req.query('offset') || '0');
-  const limit = parseInt(c.req.query('limit') || '20');
-  // ... fetch and return data
-  return c.json({ data: tracks, total });
+import { Context } from 'hono';
+import getDb from '../config/db';
+
+export const getTrack = async (c: Context) => {
+  try {
+    const id = c.req.param('id');
+    const rs = await getDb(c).execute({
+      sql: 'SELECT * FROM tracks WHERE id = ?',
+      args: [id]
+    });
+
+    if (rs.rows.length === 0) {
+      return c.json({ error: 'E_NOT_FOUND', message: 'Track not found' }, 404);
+    }
+
+    const track = rs.rows[0];
+    return c.json(track);
+  } catch (err: any) {
+    return c.json({ error: 'E_DB', message: err.message }, 500);
+  }
 };
 ```
 
-## Middleware
-
-### Authentication
-
-The `MasterOnly` middleware protects admin endpoints:
-
-```typescript
-import { MasterOnly } from '../middlewares/auth.middleware';
-
-app.post('/tracks', MasterOnly, trackController.createTrack);
-```
-
-### Cache Headers
-
-Cache-control headers are applied to public read endpoints:
-
-```typescript
-app.use('/tracks/*', cacheHeaders);
-app.use('/artists/*', cacheHeaders);
-```
+---
 
 ## Adding a New Endpoint
 
-1. Create a controller in `src/controllers/`
-2. Add routes in `src/routes/edge-routes.ts`
-3. Apply middleware as needed (auth, cache)
-4. Test with `bun run dev`
+1. **Define Handler**: Create a new exported async function in `src/controllers/<name>.controller.ts`.
+2. **Mount Route**: Register the HTTP verb and path in `src/routes/edge-routes.ts`.
+3. **Apply Auth Guard**: Pass `MasterOnly` middleware if the route mutates catalog data or exposes system settings.
+4. **Test Locally**: Execute `bun run dev` inside `lament-api` and test using `curl`.
