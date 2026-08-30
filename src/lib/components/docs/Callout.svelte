@@ -24,7 +24,7 @@
 			label: 'Tip',
 			borderClass: 'border-l-',
 			iconClass: 'text-text-primary',
-			bgClass: 'bg-[rgba(125,171,134,0.08)]'
+			bgClass: 'bg-success/[0.08]'
 		},
 		warning: {
 			icon: AlertTriangle,
@@ -38,7 +38,7 @@
 			label: 'Caution',
 			borderClass: 'border-l-',
 			iconClass: 'text-text-primary',
-			bgClass: 'bg-[rgba(196,113,108,0.08)]'
+			bgClass: 'bg-error/[0.08]'
 		},
 		important: {
 			icon: CircleAlert,
@@ -53,7 +53,7 @@
 	const Icon = $derived(c.icon);
 </script>
 
-<div class="{c.bgClass} {c.borderClass} rounded-r- my-4 border-l-[3px] px-4 py-3" role="note">
+<div class="{c.bgClass} {c.borderClass} rounded-r-md my-4 border-l-[3px] px-4 py-3" role="note">
 	<div class="mb-1 flex items-center gap-2">
 		<Icon size={16} class={c.iconClass} />
 		<span class="{c.iconClass} text-sm font-semibold">{title ?? c.label}</span>
