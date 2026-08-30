@@ -1,40 +1,129 @@
 ---
 title: Search
-description: Global search across tracks, artists, and albums.
+description: Global unified search across tracks, artists, and albums powered by Levenshtein fuzzy matching and weighted relevance scoring.
 section: Search
-order: 5
+order: 7
 method: GET
 endpoint: /search
 ---
 
 ## Global Search
 
-```
-GET /search?q=query
+```http
+GET /search?q=Tulus
 ```
 
-Searches across tracks, artists, and albums with a single query.
+Searches simultaneously across tracks, artists, and albums using fuzzy string matching and multi-factor relevance scoring.
+
+---
+
+## Search Architecture & Algorithm
+
+Lament API uses a multi-stage search engine combining Levenshtein Distance fuzzy matching with weighted SQL query scoring.
+
+```mermaid
+flowchart TD
+    Query["Search Query ('q')"] --> FuzzyArtist["1. Levenshtein Fuzzy Search on Artists (Max Distance: 3)"]
+    Query --> FuzzyCategory["2. Levenshtein Fuzzy Search on Categories (Max Distance: 2)"]
+    FuzzyArtist --> SQL["3. Execute SQL Query with Weighted Case Scoring"]
+    FuzzyCategory --> SQL
+    SQL --> Score["4. Assign Relevance Scores (100 / 80 / 60 / 30)"]
+    Score --> Sort["5. Sort by Score DESC -> Play Count DESC -> Created At DESC"]
+    Sort --> Result["6. Return JSON Response (Artists, Albums, Tracks)"]
+```
+
+---
+
+## Scoring Calculation Matrix
+
+Each track match receives a calculated `relevance_score` based on match location and weight:
+
+| Match Type | Score | Description |
+| --- | --- | --- |
+| **Track Title Match** | `100` | Exact or substring match in `tracks.title LIKE %q%` |
+| **Artist Match** | `80` | Match via Levenshtein fuzzy artist lookup or `track_artists` |
+| **Category Match** | `60` | Match via Levenshtein fuzzy category lookup or `track_categories` |
+| **Lyric Content Match** | `30` | Full-text substring match inside song lyrics (`lyrics.content LIKE %q%`) |
+
+---
+
+## Tiebreaker & Sorting Rules
+
+Results are ordered using a 3-tier tiebreaker:
+
+```sql
+ORDER BY relevance_score DESC, t.play_count DESC, t.created_at DESC
+```
+
+1. **Relevance Score**: Highest calculated match score first.
+2. **Popularity Boosting (`play_count`)**: Tied scores are sorted by total track play counts.
+3. **Recency (`created_at`)**: Tied play counts are sorted by newest added tracks.
+
+---
+
+## Request Spec
+
+### Headers
+
+- `x-api-key`: `<your_client_api_key>` (or `Authorization: Bearer <key>`)
 
 ### Query Parameters
 
-| Parameter | Type | Required | Description |
+| Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `q` | string | Yes | Search query |
+| `q` | string | Required | Search query string |
+| `limit` | integer | `10` | Max results per section |
 
-### Response
+---
+
+## Response (`200 OK`)
 
 ```json
 {
-  "tracks": [
-    { "id": "uuid", "title": "...", "artist_id": "..." }
-  ],
   "artists": [
-    { "id": "uuid", "name": "..." }
+    {
+      "id": "art_3d8e1f",
+      "name": "Tulus",
+      "slug": "tulus",
+      "images": {
+        "small": "https://cdn.lament.rynds.my.id/artists/tulus_small.webp",
+        "medium": "https://cdn.lament.rynds.my.id/artists/tulus_medium.webp",
+        "large": "https://cdn.lament.rynds.my.id/artists/tulus_large.webp"
+      }
+    }
   ],
   "albums": [
-    { "id": "uuid", "title": "..." }
+    {
+      "id": "alb_9c4b2a",
+      "title": "Manusia",
+      "year": 2022,
+      "artist": "Tulus",
+      "images": {
+        "small": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a_small.webp",
+        "medium": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a_medium.webp",
+        "large": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a_large.webp"
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "id": "trk_7f9a2b1c",
+      "title": "Jatuh Suka",
+      "duration": 224,
+      "relevance_score": 100,
+      "audio_url": "https://api.lament.rynds.my.id/stream/trk_7f9a2b1c/playlist.m3u8",
+      "artists": [
+        {
+          "id": "art_3d8e1f",
+          "name": "Tulus"
+        }
+      ],
+      "images": {
+        "small": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_small.webp",
+        "medium": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_medium.webp",
+        "large": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_large.webp"
+      }
+    }
   ]
 }
 ```
-
-The response contains separate arrays for each entity type. The frontend parses and displays these in categorized sections.
