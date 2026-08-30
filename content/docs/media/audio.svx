@@ -1,34 +1,55 @@
 ---
-title: Audio
-description: Audio processing and storage in Lament.
+title: Audio Processing & Playback
+description: Audio stream formats, anti-transcoding quality preservation, HLS playback, and track selection algorithms.
 section: Media
 order: 1
 ---
 
-## Audio Format
+## Audio Stream Formats
 
-Lament uses **HLS (HTTP Live Streaming)** for audio delivery. Each track is stored as:
+YouTube and YouTube Music serve compressed lossy audio streams across different containers:
 
-- A `.m3u8` playlist manifest
-- Multiple `.ts` transport stream segments
+- **Opus (`itag 251`)**: Streamed in WebM container at ~160 kbps bitrate. High efficiency codec equal in perceptual quality to 256 kbps AAC.
+- **AAC (`itag 140`)**: Streamed in M4A container at ~128 kbps bitrate. Broad cross-platform hardware decoding compatibility.
 
-## Processing Pipeline
+---
 
-1. Audio is downloaded from YouTube via `yt-dlp`
-2. Converted to HLS segments using FFmpeg
-3. Uploaded to Cloudflare R2
+## Anti-Transcoding Pipeline Rules
 
-## Streaming
+To prevent quality degradation caused by double lossy encoding (such as re-encoding AAC to MP3), `lament-scrapper` follows strict rules:
 
-The API provides HLS endpoints:
+1. **Direct Stream Extraction**: Raw stream chunks are saved directly into native containers (`.m4a` or `.webm`) without re-encoding flags.
+2. **No Forced MP3 Conversion**: Never pass `--extract-audio --audio-format mp3` to `yt-dlp`. Re-encoding lossy source audio cuts frequency response and creates audible artifacts.
+3. **HLS Packaging**: FFmpeg packages native Opus/AAC audio streams directly into MPEG-2 Transport Stream (`.ts`) segments without re-sampling audio data.
 
+---
+
+## Track Playback & Recommendation Engine
+
+```mermaid
+flowchart TD
+    Client["Client Player (HLS.js)"] -->|1. Request Manifest /api/stream/:id/playlist.m3u8| Proxy["SvelteKit Server Proxy"]
+    Proxy -->|2. Internal Forwarding| API["Hono Edge API"]
+    API -->|3. Fetch R2 Manifest| R2["Cloudflare R2 Bucket"]
+    R2 -->|4. Return Manifest| Client
+    Client -->|5. Direct Segment GET| CDN["Cloudflare R2 CDN (cdn.lament.rynds.my.id)"]
+    Client -->|6. Send Playback Complete Event| Webhook["POST /now-playing"]
+    Webhook --> DB["Increment t.play_count in Database"]
 ```
-GET /stream/:id/playlist.m3u8    → HLS manifest
-GET /stream/:id/:segment         → Audio segment
+
+### Random Track Selection Algorithm (`getRandomTracks`)
+
+For playlist discovery and radio playback, `lament-api` retrieves random ready tracks:
+
+```sql
+SELECT t.id, t.title, t.audio_url, t.cover_url, t.duration, t.play_count 
+FROM tracks t 
+WHERE t.status = 'ready' 
+ORDER BY RANDOM() 
+LIMIT ?
 ```
 
-The frontend uses `HLS.js` to parse the manifest and request segments for playback.
-
-## Audio Quality
-
-Audio quality depends on the YouTube source. The scraper downloads the best available audio stream.
+1. Filters tracks by `status = 'ready'`.
+2. Randomizes row ordering via LibSQL engine `RANDOM()`.
+3. Binds track artists via `track_artists` table lookup.
+4. Updates track popularity metrics (`play_count`) when `/now-playing` webhooks trigger.
