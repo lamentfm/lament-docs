@@ -23,7 +23,7 @@
 			>
 				{item}
 				{#if active === item}
-					<span class="absolute right-0 bottom-0 left-0 h-[2px] bg-accent"></span>
+					<span class="absolute right-0 bottom-0 left-0 h-0.5 bg-accent"></span>
 				{/if}
 			</button>
 		{/each}
