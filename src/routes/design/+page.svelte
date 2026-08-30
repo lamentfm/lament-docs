@@ -39,7 +39,7 @@
 
 	<!-- Technical Dot Pattern -->
 	<div
-		class="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.05)_1px,transparent_1px)] [background-size:24px_24px] dark:bg-[radial-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)]"
+		class="bg-size:24px_24px pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.05)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)]"
 	></div>
 
 	<div class="mx-auto max-w-6xl px-4 pt-24 sm:px-6 lg:px-8">
@@ -173,7 +173,9 @@
 								<div
 									class="relative z-10 flex h-20 w-[80%] items-center justify-center rounded-lg border border-surface-3/50 bg-surface-0/60 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-white/5"
 								>
-									<span class="font-mono text-xs font-medium text-text-primary">backdrop-blur-md</span>
+									<span class="font-mono text-xs font-medium text-text-primary"
+										>backdrop-blur-md</span
+									>
 								</div>
 
 								<!-- Tooltip -->
