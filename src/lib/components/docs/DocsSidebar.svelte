@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { DocSection } from '$lib/types/docs';
+	import { resolve } from '$app/paths';
 
 	let {
 		sections
@@ -26,11 +27,11 @@
 				{#each section.pages as docPage (docPage.slug)}
 					<li>
 						<a
-							href="/docs/{docPage.slug}"
-							class="block rounded-[var(--radius-sm)] px-3 py-1.5 text-sm transition-colors {isActive(
+							href={resolve(`/docs/${docPage.slug}` as "/")}
+							class="block rounded-sm px-3 py-1.5 text-sm transition-colors {isActive(
 								docPage.slug
 							)
-								? 'bg-[var(--color-accent-glow)] font-medium text-accent'
+								? 'bg-accent-glow font-medium text-accent'
 								: 'text-text-secondary hover:bg-surface-1 hover:text-text-primary'}"
 							aria-current={isActive(docPage.slug) ? 'page' : undefined}
 						>
