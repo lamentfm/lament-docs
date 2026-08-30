@@ -21,12 +21,19 @@ The API requires the following environment variables. See `.env.example` for ref
 | `R2_BUCKET` | R2 bucket name | Yes |
 | `BYPASS_MAINTENANCE` | Set to `true` to bypass maintenance mode | No |
 
+> [!TIP]
+> `ALLOWED_ORIGINS` specifies authorized production origins (e.g. `https://lament.rynds.my.id`). Local development origins (`http://localhost:*` and `http://127.0.0.1:*`) are automatically accepted by the API CORS middleware.
+
+---
+
 ## Frontend (`lament`)
 
 | Variable | Description | Required |
 | --- | --- | --- |
 | `LAMENT_API_URL` | URL of the Lament API | Yes |
 | `LAMENT_API_KEY` | API key for authentication | Yes |
+
+---
 
 ## Scraper (`lament-scrapper`)
 
@@ -39,6 +46,8 @@ The API requires the following environment variables. See `.env.example` for ref
 | `TURSO_DATABASE_URL` | Database URL (same as API) | Yes |
 | `TURSO_AUTH_TOKEN` | Database token (same as API) | Yes |
 | `R2_*` | R2 credentials (same as API) | Yes |
+
+---
 
 ## Setting up `.env`
 
