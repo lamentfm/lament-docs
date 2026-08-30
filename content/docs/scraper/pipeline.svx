@@ -1,76 +1,38 @@
 ---
-title: Pipeline
-description: Detailed scraper pipeline processing steps.
+title: Ingestion Pipeline
+description: Step-by-step breakdown of automated batch processing and GitHub Actions worker automation.
 section: Scraper
 order: 3
 ---
 
-## Input Formats
+## Pipeline Processing Steps
 
-The scraper accepts input as:
+When a new track or CSV batch is submitted for ingestion:
 
-- **CSV file** — Bulk import with columns for track name, artist, etc.
-- **Direct Spotify URLs** — Individual track or playlist URLs
-- **Search queries** — Text search via Spotify API
+1. **Query & Match**: Query Spotify / iTunes for official track name, album title, release year, genre tags, and artist details.
+2. **Audio Ripping**: Execute `yt-dlp` to extract the raw container (`.m4a` or `.webm`) directly into local temporary storage (`scratch/`).
+3. **HLS Packaging**: FFmpeg breaks the native audio stream into 10-second `.ts` segments and creates `playlist.m3u8`.
+4. **Artwork Generation**: `sharp` resizes album artwork into WebP variants (`_small.webp`, `_medium.webp`, `_large.webp`, `_original.webp`).
+5. **Asset Upload**: Upload HLS folder and WebP image files to Cloudflare R2 object storage under key `hls/<track_id>/`.
+6. **Database Insertion**: Write artist, album, track, and lyric rows to Turso LibSQL via single database transaction.
 
-## Processing Steps
+---
 
-### 1. Metadata Fetch
+## GitHub Actions Automation
 
-Query Spotify API for track metadata. Extract:
-- Track title and duration
-- Album information and cover art URL
-- Artist details
-- Spotify track ID for deduplication
+GitHub Actions runners execute batch scraping jobs on a cron schedule:
 
-### 2. Audio Download
-
-Using `yt-dlp`:
-- Search YouTube for matching audio
-- Download best quality audio stream
-- Handle rate limiting and retries
-
-### 3. Audio Processing
-
-Convert downloaded audio to HLS format:
-- Generate `.m3u8` playlist manifest
-- Split into `.ts` segments
-- Set appropriate segment duration
-
-### 4. Image Processing
-
-Using `sharp`:
-- Download cover art from best available source
-- Resize to standard dimensions
-- Convert to WebP for optimal file size
-- Generate multiple sizes if needed
-
-### 5. Lyrics Fetch
-
-Query Genius API:
-- Match track by title and artist
-- Extract lyrics content
-- Store with language and variant metadata
-
-### 6. Upload
-
-Upload processed files to Cloudflare R2:
-- HLS segments and manifest
-- Cover art images
-- Artist images
-
-### 7. Database Insert
-
-Insert metadata into LibSQL:
-- Create artist record (if new)
-- Create album record (if new)
-- Create track record with all metadata
-- Link lyrics, categories, and relationships
-
-## Error Handling
-
-The scraper logs failures and continues processing remaining items. Failed items can be retried with:
-
-```bash
-bun run repair
+```yaml
+name: Scraper Automation Cron
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 ```
+
+### IP Rate-Limit Safeguards
+
+To prevent Google / YouTube IP blocks on GitHub Actions virtual machines:
+
+- Pass `cookies.txt` exported from an authenticated human YouTube account via GitHub Secrets (`yt-dlp --cookies cookies.txt`).
+- Limit batch sizes to 30 tracks per workflow execution run.
