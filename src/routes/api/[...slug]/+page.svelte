@@ -6,9 +6,9 @@
 	import DocsPrevNext from '$lib/components/docs/DocsPrevNext.svelte';
 	import DocsTableOfContents from '$lib/components/docs/DocsTableOfContents.svelte';
 	import ApiMethod from '$lib/components/docs/ApiMethod.svelte';
-	import { copyCodeBlocks } from '$lib/actions/copyCodeBlocks';
-	import { renderMermaid } from '$lib/actions/renderMermaid';
-	import { renderCallouts } from '$lib/actions/renderCallouts';
+	// import { copyCodeBlocks } from '$lib/actions/copyCodeBlocks';
+	// import { renderMermaid } from '$lib/actions/renderMermaid';
+	// import { renderCallouts } from '$lib/actions/renderCallouts';
 
 	let { data }: { data: PageData } = $props();
 	let ContentComponent = $derived(data.component);
