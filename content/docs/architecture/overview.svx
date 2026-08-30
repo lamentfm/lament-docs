@@ -7,6 +7,10 @@ order: 1
 
 ## Ecosystem Overview
 
+> [!IMPORTANT]
+> **Proprietary & Private API Notice**
+> The Lament ecosystem and its underlying API services are **private and non-open-source**. Public third-party API access is strictly disabled to protect system integrity, preserve server resource allocations, and operate within tight Edge infrastructure quotas.
+
 Lament is a high-performance music streaming ecosystem engineered for zero-latency audio playback, automated metadata extraction, and strict access security. 
 
 Rather than a monolithic codebase, Lament is decoupled into specialized repositories under the **lamentfm** organization:
