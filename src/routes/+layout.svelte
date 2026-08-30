@@ -12,7 +12,6 @@
 
 	import { page } from '$app/state';
 	import Header from '$lib/components/Header.svelte';
-	import Footer from '$lib/components/layout/Footer.svelte';
 	import { renderCallouts } from '$lib/actions/renderCallouts';
 	import { renderMermaid } from '$lib/actions/renderMermaid';
 	import { copyCodeBlocks } from '$lib/actions/copyCodeBlocks';
@@ -35,7 +34,3 @@
 <main data-sveltekit-preload-data="hover" use:renderCallouts use:renderMermaid use:copyCodeBlocks>
 	{@render children()}
 </main>
-
-{#if page.url.pathname === '/'}
-	<Footer />
-{/if}
