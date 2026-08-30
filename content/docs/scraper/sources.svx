@@ -24,3 +24,13 @@ The scraper matches metadata to audio streams by constructing targeted search qu
 
 1. Query string: `<Artist Name> - <Track Title> Official Audio`
 2. Prefers YouTube Music streams over user-generated video uploads for higher bitrate consistency (`itag 251` Opus or `itag 140` AAC).
+
+---
+
+## Dedicated Provider CLI Commands
+
+CLI commands allow executing ingestion for a specific metadata provider:
+
+- **Spotify-First (`npm run spotify`)**: Ingests metadata 100% from Spotify Web API (`npm run spotify "https://open.spotify.com/track/..."` or `npm run spotify "Artist - Title"`).
+- **Deezer-First (`npm run deezer`)**: Ingests metadata 100% from Deezer API (`npm run deezer "https://www.deezer.com/track/..."`).
+- **Last.fm-First (`npm run lastfm`)**: Ingests metadata 100% from Last.fm API (`npm run lastfm "Artist - Title"`).
