@@ -1,6 +1,6 @@
 ---
 title: Albums
-description: Album management and retrieval endpoints.
+description: Album retrieval, tracklist listing, and management endpoints.
 section: Albums
 order: 4
 method: GET
@@ -9,63 +9,87 @@ endpoint: /albums
 
 ## List Albums
 
+```http
+GET /albums?limit=20&offset=0
 ```
-GET /albums
-```
 
-Returns a paginated list of albums.
+Returns a paginated list of albums in the catalog.
 
-### Query Parameters
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `offset` | integer | `0` | Items to skip |
-| `limit` | integer | `20` | Items per page |
-
-### Response
+### Response (`200 OK`)
 
 ```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "artist_id": "uuid",
-      "title": "Album Title",
-      "slug": "album-title",
-      "cover_url": "https://...",
-      "year": 2024,
-      "type": "album",
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "total": 30
-}
+[
+  {
+    "id": "alb_9c4b2a",
+    "artist_id": "art_3d8e1f",
+    "title": "Manusia",
+    "slug": "manusia",
+    "year": 2022,
+    "type": "album",
+    "description": "Album studio kelima karya Tulus yang dirilis pada tahun 2022.",
+    "cover_url": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a.webp",
+    "cover_source": "deezer",
+    "created_at": "2024-01-15T08:00:00Z"
+  }
+]
 ```
 
-## Get Album
+---
 
-```
+## Get Album Details & Tracklist
+
+```http
 GET /albums/:id
 ```
 
-Returns a single album with its tracks.
+### Response (`200 OK`)
 
-## Get Random Albums
-
+```json
+{
+  "id": "alb_9c4b2a",
+  "artist_id": "art_3d8e1f",
+  "artist_name": "Tulus",
+  "title": "Manusia",
+  "slug": "manusia",
+  "year": 2022,
+  "type": "album",
+  "description": "Album studio kelima karya Tulus.",
+  "cover_url": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a.webp",
+  "tracks": [
+    {
+      "id": "trk_7f9a2b1c",
+      "title": "Jatuh Suka",
+      "track_number": 1,
+      "duration": 224,
+      "audio_url": "https://api.lament.rynds.my.id/stream/trk_7f9a2b1c/playlist.m3u8"
+    },
+    {
+      "id": "trk_8e2b1a9c",
+      "title": "Hati-Hati di Jalan",
+      "track_number": 2,
+      "duration": 242,
+      "audio_url": "https://api.lament.rynds.my.id/stream/trk_8e2b1a9c/playlist.m3u8"
+    }
+  ]
+}
 ```
-GET /albums/random
+
+---
+
+## Refresh Album Artwork (Master Only)
+
+```http
+POST /refresh-image/albums/:id
 ```
 
-## Count Albums
+### Headers
 
-```
-GET /albums/count
-```
+- `X-Master-Key`: `<your_master_secret>`
 
-## Create / Update / Delete
-
-```
-POST /albums          # Create (auth required)
-PUT /albums/:id       # Update (auth required)
-DELETE /albums/:id    # Delete (auth required)
+```json
+{
+  "success": true,
+  "album_id": "alb_9c4b2a",
+  "cover_url": "https://cdn.lament.rynds.my.id/covers/alb_9c4b2a.webp"
+}
 ```
