@@ -6,11 +6,11 @@
 	} = $props();
 
 	const colors: Record<string, string> = {
-		GET: 'bg-[rgba(125,171,134,0.15)] text-success',
-		POST: 'bg-[rgba(212,132,122,0.15)] text-accent',
-		PUT: 'bg-[rgba(201,169,122,0.15)] text-secondary',
-		DELETE: 'bg-[rgba(196,113,108,0.15)] text-error',
-		PATCH: 'bg-[rgba(201,169,122,0.15)] text-secondary'
+		GET: 'bg-success/15 text-success',
+		POST: 'bg-accent/15 text-accent',
+		PUT: 'bg-secondary/15 text-secondary',
+		DELETE: 'bg-error/15 text-error',
+		PATCH: 'bg-secondary/15 text-secondary'
 	};
 
 	const colorClass = $derived(colors[method.toUpperCase()] ?? colors.GET);
