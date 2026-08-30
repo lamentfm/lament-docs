@@ -43,3 +43,11 @@ Audited all database media files by downloading binary image buffers from Cloudf
 ## 4. UI Empty-State Guards (`lament`)
 
 - **Empty Albums Guard**: Added `{#if albums && albums.length > 0}` template wrappers in `artist/[id]/+page.svelte` and `+page.svelte` to hide the Albums section header whenever an artist has 0 albums.
+
+---
+
+## 5. API Rate Limiting & k6 Load Testing (`lament-api`)
+
+- **In-Memory IP Rate Limiter (`ratelimit.middleware.ts`)**: Integrated global LRUCache-backed rate limiter capping client IPs at 60 requests per minute (1 RPS average) to prevent Worker quota exhaustion and HTTP flood DDoS attacks.
+- **Obscured Security Headers**: Removed `X-RateLimit-*` response headers and numeric payload limits to prevent attackers from probing threshold boundaries.
+- **k6 Load Testing Suite (`tests/load/k6-loadtest.js`)**: Configured a lightweight 10-VU k6 load testing suite with npm shortcut `npm run test:load` for API performance validation.
