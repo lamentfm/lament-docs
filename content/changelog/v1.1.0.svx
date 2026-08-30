@@ -1,0 +1,36 @@
+---
+title: "v1.1.0 - Bare-Metal Monolith & Direct Audio Streaming"
+date: "2023-11-01"
+version: "v1.1.0"
+---
+
+# v1.1.0 - Bare-Metal Monolith & Direct Audio Streaming
+
+> [!CAUTION]
+> **Phase 1: The Primitive Days**: Self-hosted local bare-metal server, single-file raw audio streaming without HLS, unmasked public storage URLs, ImageKit artwork hosting, and basic browser HTTP caching.
+
+---
+
+## 1. Initial Architecture & Monolithic Setup
+
+In the earliest days of Lament, the entire ecosystem was built as a self-hosted monolithic architecture running on a single local bare-metal machine:
+
+- **Local Bare-Metal Hardware**: Hosted on a **Mini PC HP ProDesk 400 G2** (Intel Core i5-6500T, 8 GB DDR4 RAM, 512 GB HDD) running **CachyOS** (Arch Linux-based OS with x86-64-v3 kernel optimizations). This server handled API requests and stored the local SQLite database for `tracks`, `artists`, and `albums`.
+- **Direct Single-File Audio Streaming**: Audio was served as giant single raw audio files (MP3/M4A) directly to users. Early attempts to implement HLS audio segmentation failed due to FFmpeg chunking configuration errors.
+
+---
+
+## 2. Early Feature & Infrastructure Breakdown
+
+### A. Server Specifications & Media Storage
+- **Hardware Specs**: Mini PC HP ProDesk 400 G2, Intel Core i5-6500T Processor, 8 GB DDR4 RAM, 512 GB HDD.
+- **Operating System**: CachyOS (Arch Linux-based distro with x86-64-v3 optimized kernel).
+- **Artwork Storage**: Cover art and artist photography uploaded to ImageKit free tier.
+- **No WebP Optimization**: Media images retained original uncompressed formats (JPEG/PNG) without automated WebP compression.
+
+### B. Security & Public Unmasked URLs ("Plong Aja")
+- **No Proxy Layer**: API endpoints and storage URLs were exposed publicly without token authorization or URL masking (*unmasked storage paths*).
+- **Browser HTTP Caching**: Relied strictly on basic browser `Cache-Control` headers without Edge CDN caching.
+
+### C. Early Spotify Metadata Scraping (`lament-scrapper`)
+- **Direct Spotify Scraping**: `lament-scrapper` extracted track metadata, album details, and artist names directly via the public Spotify Web API prior to Spotify enforcing Premium API access restrictions.
