@@ -1,60 +1,93 @@
 ---
 title: Components
-description: Frontend component architecture and conventions.
+description: Architecture conventions, state management with Svelte 5 Runes, and UI components in Lament.
 section: Development
 order: 2
 ---
 
-## Component Framework
+## Svelte 5 Runes Architecture
 
-Lament uses **Svelte 5** with Runes for all frontend components. Key patterns:
+Lament uses **Svelte 5** across all frontend applications (`lament`, `lament-docs`, `lament-admin`). Components leverage Svelte 5 Runes for explicit reactivity.
 
-### Props with `$props()`
+### 1. Component Props with `$props()`
 
-```svelte
-<script lang="ts">
-  let { title, count = 0 }: { title: string; count?: number } = $props();
-</script>
-```
-
-### Reactive State with `$state()` and `$derived()`
+Props are declared using type-annotated destructuring:
 
 ```svelte
 <script lang="ts">
-  let items = $state<string[]>([]);
-  let total = $derived(items.length);
+  let { 
+    title, 
+    artist, 
+    duration,
+    isPlaying = false 
+  }: { 
+    title: string; 
+    artist: string; 
+    duration: number;
+    isPlaying?: boolean;
+  } = $props();
 </script>
 ```
 
-## UI Library
+### 2. Local State with `$state()`
 
-The project uses **shadcn-svelte** for base UI primitives. Components are installed via the CLI and live in `src/lib/components/ui/`.
-
-Available components include:
-
-- `button` — Primary button component with variants
-- `badge` — Status badges
-- `command` — Command palette primitives
-- `dialog` — Modal dialog
-- `input` — Form inputs
-- `textarea` — Multi-line text input
-
-## Icons
-
-All icons use **Lucide Svelte** for consistency:
+State variables are explicit and mutable without requiring `writable` stores:
 
 ```svelte
-<script>
-  import { Search, Menu, Music } from 'lucide-svelte';
+<script lang="ts">
+  let currentTime = $state(0);
+  let isMuted = $state(false);
 </script>
-
-<Search size={16} />
 ```
 
-## Styling
+### 3. Derived Computations with `$derived()`
 
-Components use **Tailwind CSS v4** with custom CSS variables defined in `layout.css`. Use the existing design tokens:
+Computed properties update automatically when dependencies change:
 
-- Colors: `var(--color-accent)`, `var(--color-surface-1)`, etc.
-- Radii: `var(--radius-sm)`, `var(--radius-md)`, etc.
-- Transitions: `var(--transition-fast)`, `var(--transition-normal)`
+```svelte
+<script lang="ts">
+  let formattedTime = $derived(
+    `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`
+  );
+</script>
+```
+
+---
+
+## UI Component Library
+
+UI primitives live in `src/lib/components/ui/` and are built using Tailwind CSS v4.
+
+| Component | Path | Description |
+| --- | --- | --- |
+| `Button` | `ui/Button.svelte` | Interactive button with primary, secondary, and ghost variants |
+| `Badge` | `ui/Badge.svelte` | Status badges for format tags (e.g. `HLS`, `AAC`, `FLAC`) |
+| `Logo` | `ui/Logo.svelte` | Scalable SVG branding mark |
+| `Input` | `ui/Input.svelte` | Form input field with focus state styling |
+| `Dialog` | `ui/Dialog.svelte` | Accessible modal overlay container |
+
+---
+
+## Iconography
+
+Icons are imported from **Lucide Svelte**:
+
+```svelte
+<script lang="ts">
+  import { Play, Pause, SkipForward, Volume2 } from 'lucide-svelte';
+</script>
+
+<button class="p-2 text-text-primary hover:text-accent">
+  <Play size={20} />
+</button>
+```
+
+---
+
+## Design System Integration
+
+All components adhere to CSS tokens defined in `src/routes/layout.css`:
+
+- **Colors**: `var(--color-accent)`, `var(--color-surface-1)`, `var(--color-text-primary)`
+- **Border Radii**: `var(--radius-sm)`, `var(--radius-md)`, `var(--radius-lg)`
+- **Animations**: `var(--transition-fast)`, `var(--transition-normal)`
