@@ -7,7 +7,7 @@
 		<div class="flex items-center gap-3">
 			<Logo size="24px" class="text-text-primary" />
 			<span class="text-xs text-text-primary">
-				&copy; {new Date().getFullYear()} Lament. Open source under ISC License.
+				&copy; {new Date().getFullYear()} Lament. Music Streaming Infrastructure.
 				<span class="mx-1 text-text-muted">|</span>
 				Made by
 				<a
