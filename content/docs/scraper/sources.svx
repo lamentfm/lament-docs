@@ -1,53 +1,26 @@
 ---
-title: Sources
-description: External data sources used by the scraper.
+title: Metadata & Audio Sources
+description: External API integrations used for metadata, cover artwork, artist photography, and audio extraction.
 section: Scraper
 order: 2
 ---
 
-## Spotify
+## Integrated Metadata Sources
 
-Primary source for music metadata. Uses `spotify-web-api-node`.
+| Provider | Purpose | API Endpoint / Method | Credentials |
+| --- | --- | --- | --- |
+| **Spotify Web API** | Track, album, and artist metadata | `https://api.spotify.com/v1/search` | Client ID & Client Secret |
+| **iTunes Search API** | Track metadata fallback | `https://itunes.apple.com/search` | None (Public JSON) |
+| **Last.fm API** | High-resolution artist photography | `ws.audioscrobbler.com/2.0/?method=artist.getinfo` | API Key |
+| **Deezer API** | High-quality album cover artwork | `https://api.deezer.com/search` | None (Public JSON) |
+| **YouTube Music** | Raw audio stream extraction | `yt-dlp` stream extraction | Optional `cookies.txt` |
+| **Genius Lyrics** | Plain and synchronized lyrics | `genius-lyrics` client | Access Token |
 
-**Data obtained:**
-- Track title, duration, ISRC
-- Album title, cover art, release year
-- Artist name, genres
-- Spotify track ID (used for deduplication)
+---
 
-**Authentication:** OAuth2 client credentials flow.
+## Audio Source Matching Strategy
 
-## YouTube
+The scraper matches metadata to audio streams by constructing targeted search queries:
 
-Audio source. Uses `yt-dlp-wrap` to invoke `yt-dlp`.
-
-**Process:**
-1. Search YouTube for the track (title + artist)
-2. Select best match
-3. Download audio stream
-4. Convert to HLS segments
-
-**Requirement:** `yt-dlp` must be installed on the system.
-
-## Last.fm
-
-Supplementary metadata source for artist images and additional data.
-
-**Data obtained:**
-- High-resolution artist images
-- Artist bio and tags
-- Similar artists
-
-**Authentication:** API key (free registration).
-
-## Genius
-
-Lyrics source. Uses the `genius-lyrics` package.
-
-**Data obtained:**
-- Song lyrics (plain text)
-- Multiple language variants when available
-
-## Deezer / iTunes
-
-Fallback sources for cover art and metadata verification. Accessed via public APIs (no authentication required).
+1. Query string: `<Artist Name> - <Track Title> Official Audio`
+2. Prefers YouTube Music streams over user-generated video uploads for higher bitrate consistency (`itag 251` Opus or `itag 140` AAC).
