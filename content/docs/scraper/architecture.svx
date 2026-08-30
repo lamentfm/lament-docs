@@ -1,59 +1,29 @@
 ---
 title: Scraper Architecture
-description: How the Lament scraper pipeline works.
+description: Overview of the automated music metadata extraction, audio ripping, and asset processing worker.
 section: Scraper
 order: 1
 ---
 
-## Overview
+## Pipeline Overview
 
-The scraper (`lament-scrapper`) is a Node.js CLI tool that automates music ingestion. It orchestrates multiple external services to build the Lament music library.
+The scraper (`lament-scrapper`) is an automated CLI worker that populates the Lament media catalog. It integrates multiple APIs and command-line utilities:
 
-## Pipeline
-
-```
-Input (CSV / Spotify URL / Search query)
-        │
-        ▼
-1. Spotify API ──► Fetch metadata (track, album, artist)
-        │
-        ▼
-2. YouTube Search ──► Find matching audio
-        │
-        ▼
-3. yt-dlp ──► Download audio
-        │
-        ▼
-4. FFmpeg ──► Convert to HLS (m3u8 + ts segments)
-        │
-        ▼
-5. Sharp ──► Process cover art (resize, WebP)
-        │
-        ▼
-6. Genius ──► Fetch lyrics
-        │
-        ▼
-7. R2 Upload ──► Store audio + images
-        │
-        ▼
-8. LibSQL ──► Insert metadata
+```mermaid
+flowchart TD
+    Input["Track Query Input (Spotify URL / Track Name)"] --> Step1["1. Metadata Lookup (Spotify Web API / iTunes API)"]
+    Step1 --> Step2["2. Audio Search & Extraction (yt-dlp raw Opus/AAC rip)"]
+    Step2 --> Step3["3. HLS Packaging (FFmpeg segmenting .m3u8 + .ts)"]
+    Step3 --> Step4["4. Visual Asset Enrichment (Last.fm & Deezer via sharp WebP)"]
+    Step4 --> Step5["5. Lyrics Fetching (Genius / LRC synced text)"]
+    Step5 --> Step6["6. Storage & Database Insertion (R2 Upload & Turso Record Creation)"]
 ```
 
-## Entry Points
+---
 
-The main entry point is `src/index.ts`. The scraper can be run in different modes:
+## Anti-Duplication Controls
 
-```bash
-# Full scrape from CSV input
-bun run dev
+To prevent duplicate track records:
 
-# Individual scripts
-bun run backup        # Backup database
-bun run restore       # Restore from backup
-bun run reconcile     # Reconcile DB with R2
-bun run repair        # Repair metadata
-```
-
-## Anti-Duplication
-
-Tracks have an `original_id` field (Spotify ID or YouTube ID) marked as `UNIQUE` to prevent duplicate entries.
+- Every track row stores an `original_id` field (e.g. `yt_d9f8a2b` or Spotify ID) enforced with a `UNIQUE` SQL index constraint.
+- The scraper queries `tracks WHERE original_id = ?` prior to audio downloading to skip existing songs.
