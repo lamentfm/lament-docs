@@ -1,79 +1,135 @@
 ---
 title: API Overview
-description: Overview of the Lament REST API.
+description: Architecture, Dual-Layer Authentication, and Standard Response Contracts for the Lament REST API.
 section: Overview
 order: 0
 ---
 
+## Closed-Source API Notice
+
+The **Lament REST API** (`lament-api`) is a proprietary, closed-source service deployed on Cloudflare Workers (Edge Runtime) backed by LibSQL / Turso DB and Cloudflare R2 storage.
+
+> [!IMPORTANT]
+> The API endpoints are strictly protected and **not accessible to the public internet** without valid client or master credentials. Browsers do not hit the API directly; all web requests are proxied via the SvelteKit frontend server routes (`+server.ts`).
+
 ## Base URL
 
-```
+```http
 https://api.lament.rynds.my.id
 ```
 
-## Authentication
+## Dual-Layer Authentication Model
 
-Most endpoints require the `X-Master-Key` header:
+Lament enforces a strict dual-layer authorization architecture. Passing `X-Master-Key` alone is **not sufficient** for standard client operations, and vice versa.
+
+### 1. Client Authorization (`x-api-key` / `Authorization: Bearer <key>`)
+
+Required for consumer client applications (SvelteKit proxy, Flutter Mobile App) to browse music, search, fetch lyrics, and retrieve HLS playlists.
+
+- **Header 1**: `x-api-key: <your_client_api_key>`
+- **Header 2**: `Authorization: Bearer <your_client_api_key>`
+
+Backend checks the SHA-256 hash of this key against the `clients` / `api_keys` database table.
 
 ```bash
-curl -H "X-Master-Key: your_key" https://api.lament.rynds.my.id/tracks
+curl -H "x-api-key: lmt_live_9f8a7b6c5d4e3f2a" \
+     https://api.lament.rynds.my.id/tracks
 ```
 
-Public endpoints (streaming, health checks) do not require authentication.
+### 2. Master Authorization (`X-Master-Key`)
 
-## Response Format
+Required exclusively for administrative operations, maintenance mode toggles, API key generation, image cache flushes, scraper ingestion, and global settings.
 
-All endpoints return JSON. Successful responses follow this pattern:
+- **Header**: `X-Master-Key: <your_master_secret>`
+
+```bash
+curl -H "X-Master-Key: your_super_secret_master_key" \
+     -X PUT https://api.lament.rynds.my.id/maintenance \
+     -H "Content-Type: application/json" \
+     -d '{"lament_api": true, "description": "Scheduled database migration"}'
+```
+
+---
+
+## Standard Response Contracts
+
+### Success List Response (Paginated)
+
+```json
+[
+  {
+    "id": "trk_7f9a2b1c",
+    "title": "Jatuh Suka",
+    "slug": "jatuh-suka",
+    "artist_id": "art_3d8e1f",
+    "album_id": "alb_9c4b2a",
+    "duration": 224,
+    "audio_url": "https://api.lament.rynds.my.id/stream/trk_7f9a2b1c/playlist.m3u8",
+    "album": {
+      "title": "Manusia"
+    },
+    "artists": [
+      {
+        "id": "art_3d8e1f",
+        "name": "Tulus"
+      }
+    ],
+    "images": {
+      "small": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_small.webp",
+      "medium": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_medium.webp",
+      "large": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_large.webp",
+      "original": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_original.webp"
+    }
+  }
+]
+```
+
+### Count Endpoint Response
 
 ```json
 {
-  "data": [...],
-  "total": 100
+  "total": 1450
 }
 ```
 
-Error responses:
+### Error Responses
 
+#### `401 Unauthorized`
 ```json
 {
-  "error": "E_AUTH"
+  "error": "E_AUTH",
+  "message": "Invalid or missing API key"
 }
 ```
+
+#### `404 Not Found`
+```json
+{
+  "error": "E_NOT_FOUND",
+  "message": "The requested resource could not be found"
+}
+```
+
+#### `503 Service Unavailable (Maintenance)`
+```json
+{
+  "maintenance": true,
+  "description": "Lament API is currently under maintenance for system upgrades.",
+  "updated_at": "2026-08-30T08:00:00Z"
+}
+```
+
+---
 
 ## Status Codes
 
-| Code | Description |
-| --- | --- |
-| `200` | Success |
-| `201` | Created |
-| `401` | Unauthorized — missing or invalid API key |
-| `404` | Not found |
-| `500` | Internal server error |
-| `503` | Service unavailable — maintenance mode |
-
-## Pagination
-
-List endpoints support pagination via query parameters:
-
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `offset` | integer | `0` | Number of items to skip |
-| `limit` | integer | `20` | Number of items to return |
-
-## Rate Limiting
-
-No explicit rate limiting is currently enforced. Cache-control headers are applied to public endpoints.
-
-## Available Endpoints
-
-| Resource | Endpoints |
-| --- | --- |
-| [Tracks](/api/tracks) | `GET /tracks`, `GET /tracks/:id`, `POST /tracks`, `PUT /tracks/:id`, `DELETE /tracks/:id` |
-| [Artists](/api/artists) | `GET /artists`, `GET /artists/:id`, `POST /artists`, `PUT /artists/:id`, `DELETE /artists/:id` |
-| [Albums](/api/albums) | `GET /albums`, `GET /albums/:id`, `POST /albums`, `PUT /albums/:id`, `DELETE /albums/:id` |
-| [Search](/api/search) | `GET /search` |
-| [Lyrics](/api/lyrics) | `GET /tracks/:id/lyrics`, `POST /tracks/:id/lyrics`, `DELETE /lyrics/:id` |
-| [Streaming](/api/streaming) | `GET /stream/:id/playlist.m3u8`, `GET /stream/:id/:segment` |
-| [Requests](/api/requests) | `GET /requests`, `POST /requests` |
-| [Playlists](/api/playlists) | `GET /playlists/:id`, `POST /playlists`, `PUT /playlists/:id`, `DELETE /playlists/:id` |
-| [Categories](/api/categories) | `GET /categories` |
+| Code | Status | Description |
+| --- | --- | --- |
+| `200` | OK | Success |
+| `201` | Created | Resource successfully created |
+| `304` | Not Modified | ETag matched; cached client response is valid |
+| `400` | Bad Request | Invalid query parameters or body payload |
+| `401` | Unauthorized | Missing or invalid `x-api-key` / `X-Master-Key` |
+| `404` | Not Found | Target ID or route does not exist |
+| `500` | Internal Error | Unhandled edge worker error |
+| `503` | Maintenance | API maintenance flag is active |
