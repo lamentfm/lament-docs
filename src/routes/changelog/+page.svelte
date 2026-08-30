@@ -7,15 +7,17 @@
 		MDModule
 	>;
 
-	const changelogs: ChangeLogItem[] = Object.entries(files).map(([filepath, mod]) => ({
-		version:
-			filepath
-				.split('/')
-				.pop()
-				?.replace(/\.(md|svx)$/, '') ?? '',
-		component: mod.default,
-		metadata: mod.metadata ?? {}
-	}));
+	const changelogs: ChangeLogItem[] = Object.entries(files)
+		.map(([filepath, mod]) => ({
+			version:
+				filepath
+					.split('/')
+					.pop()
+					?.replace(/\.(md|svx)$/, '') ?? '',
+			component: mod.default,
+			metadata: mod.metadata ?? {}
+		}))
+		.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true, sensitivity: 'base' }));
 
 	let selectedVersion = $state(changelogs[0]?.version);
 	let current = $derived(changelogs.find((c) => c.version === selectedVersion));
