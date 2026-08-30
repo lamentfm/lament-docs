@@ -1,42 +1,28 @@
 ---
-title: Backup
-description: Database and storage backup procedures.
+title: Database & Media Backups
+description: Backup and disaster recovery procedures for LibSQL database tables and Cloudflare R2 media assets.
 section: Operations
 order: 2
 ---
 
-## Database Backup
+## Database Backups (Turso LibSQL)
 
-The scraper includes backup and restore scripts:
+Turso automatically manages point-in-time database backups. For manual snapshot exports:
 
 ```bash
 cd lament-scrapper
-
-# Create backup
 bun run backup
-
-# Restore from backup
-bun run restore
 ```
 
-Backups are stored as JSON files in the project directory.
+This exports SQL table dumps into local storage key snapshots.
 
-## R2 Storage
+---
 
-Cloudflare R2 data can be backed up using the AWS CLI (S3-compatible):
+## Object Storage Synchronization
+
+To replicate or back up Cloudflare R2 media files to local storage, use AWS CLI S3 sync:
 
 ```bash
-aws s3 sync s3://your-bucket ./backup \
-  --endpoint-url https://ACCOUNT_ID.r2.cloudflarestorage.com
+aws s3 sync s3://lament-media ./backup-media \
+  --endpoint-url https://<account_id>.r2.cloudflarestorage.com
 ```
-
-## Reconciliation
-
-To ensure database and R2 storage are in sync:
-
-```bash
-cd lament-scrapper
-bun run reconcile
-```
-
-This checks for orphaned records and missing files.
