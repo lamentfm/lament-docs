@@ -1,55 +1,57 @@
 ---
-title: Authentication
-description: Authentication mechanisms in Lament.
+title: Authentication & Authorization
+description: In-depth dual-layer authentication model, client key hashes, and Master-only guard middleware.
 section: Security
 order: 1
 ---
 
-## API Authentication
+## Dual-Layer Security Model
 
-The Lament API uses **Master Key** authentication. All non-public endpoints require the `X-Master-Key` or `x-api-key` header.
+Lament uses a dual-layer security architecture designed to isolate client-facing operations from administrative catalog mutation.
 
-### Public Endpoints (No Auth)
-
-These paths are accessible without authentication:
-
-- `GET /` — API info
-- `GET /health` — Health check
-- `GET /ping` — Ping
-- `GET /maintenance` — Maintenance status
-- `GET /stream/*` — Audio streaming
-- `GET /images/*` — Image serving
-
-### Protected Endpoints
-
-All other endpoints require authentication:
-
-```bash
-curl -H "X-Master-Key: your_master_key" \
-  https://api.lament.rynds.my.id/tracks
+```mermaid
+flowchart TD
+    Client["Client App (Web / Mobile)"] -->|"Header: x-api-key"| AuthMW["authMiddleware (Client Hash Check)"]
+    Admin["Master Admin / Scraper"] -->|"Header: X-Master-Key"| MasterMW["MasterOnly Middleware"]
+    AuthMW --> CatalogAPI["Public Catalog API Endpoints"]
+    MasterMW --> AdminAPI["Administrative & Scraper Endpoints"]
 ```
 
-### Master-Only Endpoints
+---
 
-Some endpoints require master-level access (via `MasterOnly` middleware):
+## 1. Client Authorization (`x-api-key` / `Authorization: Bearer <key>`)
 
-- Client management (`/clients`)
-- Playlist management (`/playlists`)
-- Music upload (`POST /music`)
-- Image refresh (`/refresh-image/*`)
+Required for consumer client applications (SvelteKit web proxy, Flutter mobile app) to browse catalog endpoints (`/tracks`, `/artists`, `/albums`, `/search`, `/lyrics`).
 
-## Frontend Proxy Authentication
+- **Header Option 1**: `x-api-key: <client_api_key>`
+- **Header Option 2**: `Authorization: Bearer <client_api_key>`
 
-The SvelteKit frontend injects the API key server-side. The browser never sees the master key:
+Backend process (`auth.middleware.ts`):
+1. Reads key from header.
+2. Queries database: `SELECT id, clearance FROM clients WHERE key_hash = ? AND is_active = 1`.
+3. If valid, attaches clearance level to request context and proceeds.
 
-```
-Browser → SvelteKit Server → [Injects X-Master-Key] → Hono API
-```
+---
 
-## Client API Keys
+## 2. Master Authorization (`X-Master-Key`)
 
-The `clients` table stores API keys with:
-- `key_hash` — Bcrypt-hashed API key
-- `is_active` — Whether the key is enabled
-- `name` — Client name
-- `contact` — Contact information
+Required for administrative operations (`/clients`, `/maintenance` PUT, `/refresh-image/*`, scraper ingestion).
+
+- **Header**: `X-Master-Key: <master_secret>`
+
+Backend process (`MasterOnly` middleware):
+1. Reads `X-Master-Key` header.
+2. Performs constant-time SHA-256 HMAC comparison against `process.env.MASTER_KEY`.
+3. Rejects invalid requests with `401 Unauthorized` (`{"error": "Unauthorized: Master access required"}`).
+
+---
+
+## 3. Public Routes (No Auth)
+
+The following paths bypass authentication:
+
+- `GET /` (System status)
+- `GET /health` (Health check)
+- `GET /ping` (Ping check)
+- `GET /maintenance` (Public maintenance state query)
+- `GET /stream/:id/:segment` (Token-validated audio segment URL)
