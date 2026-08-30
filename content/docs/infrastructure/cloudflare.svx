@@ -1,42 +1,75 @@
 ---
-title: Cloudflare
-description: Cloudflare Workers and edge deployment configuration.
+title: Cloudflare Edge & WAF Security
+description: Deploying Hono API on Cloudflare Workers edge runtime, R2 bindings, WAF block rules, and Global Rate Limiting.
 section: Infrastructure
 order: 1
 ---
 
-## Cloudflare Workers
+## Cloudflare Workers Architecture
 
-The API is deployed to **Cloudflare Workers** for edge execution. Configuration is in `wrangler.jsonc`.
+The backend REST service (`lament-api`) executes globally on **Cloudflare Workers**. Requests are terminated at the nearest Cloudflare PoP (Point of Presence), minimizing network latency for database queries and audio manifest rendering.
 
-## Configuration
+---
+
+## Configuration (`wrangler.jsonc`)
 
 ```jsonc
 {
   "name": "lament-api",
   "compatibility_date": "2024-01-01",
-  "main": "src/index-edge.ts"
+  "main": "src/index-edge.ts",
+  "r2_buckets": [
+    {
+      "binding": "R2_STORAGE",
+      "bucket_name": "lament-media"
+    }
+  ]
 }
 ```
 
-## Edge Runtime
+---
 
-The edge entry point (`src/index-edge.ts`) uses the same Hono app but with Cloudflare-specific bindings:
+## Cloudflare WAF Custom Security Rules
 
-- Environment variables are accessed via `c.env` instead of `process.env`
-- R2 buckets are bound as Workers bindings
-- D1/Turso connections use edge-compatible drivers
+Cloudflare Web Application Firewall (WAF) enforces custom expression rules before traffic reaches worker scripts or R2 storage buckets.
 
-## Deployment
+### 1. Custom Block WAF Rule
+- **Direct `/hls/` Hotlink Defense**: Blocks any direct URL request to `/hls/` if `http.referer` does not contain `lament.rynds.my.id` or `localhost`.
+- **Environment & Credential Protection**: Instantly drops requests attempting to access `.env`, `wp-config.php`, `.htaccess`, `.ssh/id_rsa`, `.aws/credentials`, `docker-compose.yml`, `secrets.yml`, `database.sqlite`, `dump.sql`, or `.bak` files.
+- **Vulnerability Probe Filtering**: Drops automated bot traffic scanning for `/wp-admin`, `/phpmyadmin`, `/shell`, `/actuator`, `/_profiler`, `/telescope`, or `/console`.
 
-Deploy to Cloudflare Workers:
+### 2. Single Global Rate Limiting WAF Rule
+- **Target Expression**:
+  ```sql
+  (http.request.uri.path contains "/") and (http.host contains "rynds.my.id") and not (http.request.uri.path contains "/stream/") and not (http.request.uri.path.extension in {"ts" "webp" "png" "jpg" "jpeg"})
+  ```
+- **Threshold**: `80 - 100 requests` per `10 seconds` (Action: Block / Challenge for `10 minutes`).
+
+See [Security Practices](/docs/security/security-practices) for the complete WAF expression rule syntax.
+
+---
+
+## Edge Runtime Differences
+
+When running on Cloudflare Workers (`src/index-edge.ts`):
+
+- **Environment Injection**: Secrets and environment variables are bound to request context `c.env` instead of `process.env`.
+- **R2 Storage Bindings**: Object storage operations interact directly with bound R2 bucket instances (`c.env.R2_STORAGE`) without requiring HTTP S3 SDK overhead.
+- **Sub-request Limits**: External outgoing requests (such as webhook notifications) use edge non-blocking `fetch()`.
+
+---
+
+## Deployment Commands
+
+Deploy the API worker to production:
 
 ```bash
+cd lament-api
 bunx wrangler deploy
 ```
 
-For local development with Workers runtime:
+Tail live edge production logs:
 
 ```bash
-bunx wrangler dev
+bunx wrangler tail
 ```
