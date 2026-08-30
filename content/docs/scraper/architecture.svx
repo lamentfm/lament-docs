@@ -11,7 +11,7 @@ The scraper (`lament-scrapper`) is an automated CLI worker that populates the La
 
 ```mermaid
 flowchart TD
-    Input["Track Query Input (Spotify URL / Track Name)"] --> Step1["1. Metadata Lookup (Spotify Web API / iTunes API)"]
+    Input["Track Query Input (URL / Track Name)"] --> Step1["1. Metadata Lookup (Spotify / Last.fm / Deezer / iTunes)"]
     Step1 --> Step2["2. Audio Search & Extraction (yt-dlp raw Opus/AAC rip)"]
     Step2 --> Step3["3. HLS Packaging (FFmpeg segmenting .m3u8 + .ts)"]
     Step3 --> Step4["4. Visual Asset Enrichment (Last.fm & Deezer via sharp WebP)"]
