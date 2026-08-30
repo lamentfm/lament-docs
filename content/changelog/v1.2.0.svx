@@ -1,0 +1,49 @@
+---
+title: "v1.2.0 - Cloudflare Ecosystem Migration & Security Over-Engineering"
+date: "2024-05-15"
+version: "v1.2.0"
+---
+
+# v1.2.0 - Cloudflare Ecosystem Migration & Security Over-Engineering
+
+> [!NOTE]
+> **Phase 2: Waking Up After a 2-Month Sleep**: Rebuilding infrastructure after a fatal local HDD corruption outage, migrating to Cloudflare R2, Workers & Pages, implementing HLS audio segmentation, and over-engineering backend proxy security with dynamic session tokens.
+
+---
+
+## 1. Background & The Fatal HDD Corruption Outage
+
+After running smoothly for 6 to 8 months on the local Mini PC HP ProDesk 400 G2 (Intel Core i5-6500T, 8 GB RAM, 512 GB HDD, CachyOS), the server suffered a fatal **HDD disk sector corruption**:
+
+- **Incident Symptoms**: The operating system initially threw I/O errors and failed to load the user directory (`/home`). Upon rebooting, corrupt disk sectors prevented the machine from booting entirely.
+- **2-Month Downtime**: The server hardware failure left the Lament service offline for approximately 2 months while a new infrastructure architecture was evaluated.
+- **Storage Shift**: Continuing media storage on ImageKit was financially unviable due to tight egress bandwidth limits and lack of native audio streaming packaging.
+
+In **v1.2.0**, the entire ecosystem migrated to **Cloudflare Edge**:
+
+- **Cloudflare Pages**: Deployed the SvelteKit web player frontend (`lament`) on Cloudflare Pages for instant global CDN rendering and automated Git deployments.
+- **Cloudflare R2**: Bandwidth-efficient object storage for WebP artwork and HLS audio segment files (`.ts`).
+- **Cloudflare Workers (Hono Framework)**: Multi-region edge API backend replacing the local server.
+- **Turso (LibSQL)**: Cloud-native edge SQLite database with low-latency edge replication.
+
+---
+
+## 2. Feature & System Breakdown
+
+### A. HLS Audio Segmentation Pipeline (`lament-scrapper`)
+- **FFmpeg HLS Packaging**: Segmented raw audio into HTTP Live Streaming playlists (`playlist.m3u8`) and 4-second Transport Stream chunks (`.ts`) for instant buffering.
+- **Anti-Transcoding Quality Rule**: Directly extracted raw YouTube Music lossy streams (Opus `itag 251` ~160kbps / AAC `itag 140` ~128kbps) without re-encoding to MP3 to preserve frequency fidelity.
+
+### B. Security Over-Engineering (Full Backend Proxy)
+- **Randomized Session UUID Tokens**: All HLS segments and cover artwork requests were proxy-routed through Worker backends using dynamic session tokens (6-hour TTL) to mask underlying R2 storage paths.
+- **Dual-Layer Authentication Middleware**:
+  - `x-api-key`: Hash-based public client authorization key.
+  - `x-master-key`: Master guard secret for administrative CRUD operations (create/update/delete tracks).
+
+### C. Metadata Scrapper Fallback (Deezer & Last.fm API)
+- **Spotify Web API Workaround**: When Spotify introduced mandatory Premium subscription checks for Web API metadata access, `lament-scrapper` was upgraded with a unified metadata provider extracting high-res artist photography and album details from Deezer API and Last.fm API.
+
+### D. API Features & Pagination Controls (`lament-api`)
+- **Pagination `?limit` & `?offset`**: Added pagination query controls on `/tracks`, `/artists`, `/albums` (with `limit` capped at 100) to prevent edge database buffer exhaustion.
+- **Multi-Variant Lyrics Support**: Schema additions in `lyrics` database table for multiple lyric variants per track (`original`, `romanized`, `translated`).
+- **Maintenance Mode Circuit Breaker**: Introduced `GET /maintenance` route and circuit-breaker middleware to switch the web app to maintenance mode instantly via database flags.
