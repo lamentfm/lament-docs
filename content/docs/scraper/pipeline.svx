@@ -9,7 +9,7 @@ order: 3
 
 When a new track or CSV batch is submitted for ingestion:
 
-1. **Query & Match**: Query Spotify / iTunes for official track name, album title, release year, genre tags, and artist details.
+1. **Query & Match**: Query Spotify, Last.fm, Deezer, and iTunes for official track name, album title, release year, genre tags, and artist details.
 2. **Audio Ripping**: Execute `yt-dlp` to extract the raw container (`.m4a` or `.webm`) directly into local temporary storage (`scratch/`).
 3. **HLS Packaging**: FFmpeg breaks the native audio stream into 10-second `.ts` segments and creates `playlist.m3u8`.
 4. **Artwork Generation**: `sharp` resizes album artwork into WebP variants (`_small.webp`, `_medium.webp`, `_large.webp`, `_original.webp`).
