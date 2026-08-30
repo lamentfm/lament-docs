@@ -1,52 +1,53 @@
 ---
-title: Maintenance
-description: Maintenance mode and procedures.
+title: Maintenance Mode
+description: Database-driven maintenance circuit breaker and API bypass mechanism.
 section: Operations
 order: 3
 ---
 
-## Maintenance Mode
+## Dynamic Maintenance Architecture
 
-Lament has a database-driven maintenance mode that can be toggled per service.
+Lament features a database-driven maintenance switch. When maintenance mode is active for `lament_api`, all non-administrative requests are immediately intercepted by middleware returning HTTP 503 Service Unavailable.
 
-### Enable Maintenance
+---
 
-```bash
-curl -X PUT \
-  -H "X-Master-Key: your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"lament_api": true, "lament": true, "description": "Scheduled maintenance"}' \
-  https://api.lament.rynds.my.id/maintenance
+## Toggling Maintenance Mode
+
+### Check Status (`GET /maintenance`)
+
+```http
+GET /maintenance
 ```
 
-### Disable Maintenance
-
-```bash
-curl -X PUT \
-  -H "X-Master-Key: your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"lament_api": false, "lament": false, "description": ""}' \
-  https://api.lament.rynds.my.id/maintenance
+```json
+{
+  "lament": false,
+  "lament_api": true,
+  "description": "Upgrading database schema for new lyric features",
+  "updated_at": "2026-08-30T08:00:00Z"
+}
 ```
 
-### Behavior
+### Enable / Disable Maintenance (`PUT /maintenance`)
 
-When `lament_api` is `true`:
-- All API endpoints (except `/health`, `/ping`, `/maintenance`) return `503`
-- The response includes a maintenance description and timestamp
-- The bypass can be enabled with `BYPASS_MAINTENANCE=true` env var
-
-When `lament` is `true`:
-- The SvelteKit frontend redirects users to a maintenance page
-- The redirect is handled in `hooks.server.ts`
-
-## Repair Scripts
-
-The scraper includes several repair scripts:
+Requires `X-Master-Key`:
 
 ```bash
-bun run repair            # Repair metadata
-bun run repair:audio      # Repair audio files
-bun run repair:title      # Repair track titles
-bun run repair:tracks     # Repair track images
+curl -X PUT https://api.lament.rynds.my.id/maintenance \
+  -H "X-Master-Key: <your_master_secret>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lament_api": true,
+    "description": "Scheduled maintenance for database migration"
+  }'
+```
+
+---
+
+## Bypassing Maintenance Mode
+
+Developers can bypass maintenance mode locally or in production by setting the environment variable:
+
+```env
+BYPASS_MAINTENANCE=true
 ```
