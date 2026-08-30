@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { TocItem } from '$lib/types/docs';
-	import { page } from '$app/state';
+	// import { page } from '$app/state';
 	import { tick } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
@@ -20,7 +20,7 @@
 
 	$effect(() => {
 		// Track pathname dependency so TOC resets & re-scans on every page navigation
-		const currentPath = page.url.pathname;
+		// const currentPath = page.url.pathname;
 		if (typeof window === 'undefined') return;
 
 		let observer: IntersectionObserver | null = null;
@@ -118,9 +118,7 @@
 
 {#if items.length > 0}
 	<nav class="px-4 py-4" aria-label="On this page">
-		<h4
-			class="mb-3 text-sm font-semibold tracking-wider text-text-primary uppercase"
-		>
+		<h4 class="mb-3 text-sm font-semibold tracking-wider text-text-primary uppercase">
 			On this page
 		</h4>
 		<ul class="space-y-1">
