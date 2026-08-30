@@ -1,35 +1,39 @@
 ---
-title: Monitoring
-description: Monitoring Lament services.
+title: Monitoring & Health Checks
+description: Service monitoring endpoints, ping routes, and edge logs.
 section: Operations
 order: 1
 ---
 
-## Health Checks
+## Monitoring Endpoints
 
-The API provides health and ping endpoints:
+`lament-api` exposes automated health endpoints for uptime monitoring services (such as UptimeRobot or Better Stack):
 
-```
-GET /health    → { "s": 1, "runtime": "edge" }
-GET /ping      → { "pong": true, "ts": 1234567890 }
-```
+### 1. Health Status (`GET /health`)
 
-## API Status
-
-The root endpoint provides system status:
-
-```
-GET /          → { "name": "lament-api", "version": "1.2.0", "status": "operational" }
+```json
+{
+  "s": 1,
+  "runtime": "edge"
+}
 ```
 
-When maintenance mode is active, the status changes to `"maintenance"` with a description.
+### 2. Ping (`GET /ping`)
 
-## Maintenance Status
-
-Check maintenance state:
-
+```json
+{
+  "pong": true,
+  "ts": 1724985600000
+}
 ```
-GET /maintenance
-```
 
-Returns the maintenance state for both the API and frontend services.
+---
+
+## Log Tailing
+
+Tail live production logs from Cloudflare Workers edge nodes:
+
+```bash
+cd lament-api
+bunx wrangler tail
+```
