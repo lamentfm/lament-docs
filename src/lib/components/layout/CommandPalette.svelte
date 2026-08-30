@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Search, FileText, Code, ArrowRight } from 'lucide-svelte';
+	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 	import { buildSearchIndex, searchContent } from '$lib/content/search';
 	import type { SearchItem } from '$lib/types/docs';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -10,7 +12,7 @@
 	let query = $state('');
 	let searchIndex = $state<SearchItem[]>([]);
 
-	$effect(() => {
+	onMount(() => {
 		searchIndex = buildSearchIndex();
 	});
 
@@ -39,7 +41,7 @@
 	function navigate(href: string) {
 		open = false;
 		query = '';
-		goto(href);
+		goto(resolve(href as "/"));
 	}
 </script>
 
@@ -52,7 +54,7 @@
 	<Search size={14} />
 	<span class="hidden sm:inline">Search docs...</span>
 	<kbd
-		class="ml-4 hidden rounded-[var(--radius-sm)] border border-surface-3 bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-muted sm:inline"
+		class="ml-4 hidden rounded-sm border border-surface-3 bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-text-muted sm:inline"
 	>
 		⌘K
 	</kbd>
@@ -61,13 +63,13 @@
 <!-- Command Palette Dialog -->
 <Dialog.Root bind:open>
 	<Dialog.Content
-		class="top-[20%] translate-y-0 overflow-hidden rounded-[var(--radius-lg)] !border-0 bg-surface-1 p-0 shadow-2xl !ring-0 sm:max-w-[540px]"
+		class="top-[20%] translate-y-0 overflow-hidden rounded-lg border-0! bg-surface-1 p-0 shadow-2xl ring-0! sm:max-w-135"
 		aria-label="Search documentation"
 		showCloseButton={false}
 	>
-		<Command.Root class="rounded-[var(--radius-lg)]" shouldFilter={false}>
+		<Command.Root class="rounded-lg" shouldFilter={false}>
 			<Command.Input placeholder="Search documentation..." bind:value={query} />
-			<Command.List class="max-h-[360px]">
+			<Command.List class="max-h-90">
 				{#if query && results.length === 0}
 					<Command.Empty>No results found for "{query}"</Command.Empty>
 				{/if}
