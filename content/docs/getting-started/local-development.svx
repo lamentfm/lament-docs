@@ -1,70 +1,84 @@
 ---
 title: Local Development
-description: Run Lament locally for development and testing.
+description: Complete step-by-step guide for running the Lament multi-repository stack locally using Bun.
 section: Getting Started
 order: 2
 ---
 
-## Running the API
+## Overview
 
-The API server uses Hono with `tsx` for development:
+Developing Lament locally requires running the API server and frontend application in parallel. Since the SvelteKit frontend server proxies requests to `lament-api`, both services must be active for catalog navigation and audio streaming to function.
+
+---
+
+## 1. Running the REST API (`lament-api`)
+
+The API server runs on Hono and can be started in Node/Bun watch mode or via Cloudflare `wrangler` for edge emulation.
+
+### Watch Mode (Local Development)
 
 ```bash
 cd lament-api
 bun run dev
 ```
 
-This starts the API at `http://localhost:3000` using `tsx --watch` for hot reloading.
+This boots the HTTP server at `http://localhost:3000` with hot reloading enabled.
 
-For the edge-compatible version (Cloudflare Workers), use `wrangler`:
+### Edge Worker Emulation (Wrangler)
+
+To test Cloudflare Worker bindings (`c.env`), R2 storage simulation, and edge CORS headers:
 
 ```bash
-bunx wrangler dev
+cd lament-api
+bunx wrangler dev --remote
 ```
 
-## Running the Frontend
+---
 
-The SvelteKit frontend connects to the API through server-side proxy endpoints:
+## 2. Running the Web Frontend (`lament`)
+
+The SvelteKit application handles page routes, state management, and server-side request proxying.
 
 ```bash
 cd lament
 bun run dev
 ```
 
-The frontend dev server starts at `http://localhost:5173`.
+The dev server will start at `http://localhost:5173`. Ensure `.env` contains:
 
-## Running the Docs
+```env
+LAMENT_API_URL=http://localhost:3000
+LAMENT_API_KEY=lmt_dev_key_12345
+```
+
+---
+
+## 3. Running the Documentation App (`lament-docs`)
 
 ```bash
 cd lament-docs
 bun run dev
 ```
 
-The documentation site starts at `http://localhost:5174` (or next available port).
+Starts the local documentation portal at `http://localhost:5174`.
 
-## Running the Scraper
+---
 
-The scraper is a CLI tool, not a server. Run individual commands:
+## 4. Executing Scraper Ingestion Jobs (`lament-scrapper`)
+
+The scraper is a CLI worker tool. To process a track query locally:
 
 ```bash
 cd lament-scrapper
-bun run dev
+bun run scrape --query "Tulus - Jatuh Suka"
 ```
 
-See [Scraper Architecture](/docs/scraper/architecture) for details on scraper commands.
+---
 
-## Full Stack Development
+## Full Stack Development Workflow
 
-To run the full stack locally, start the API and frontend in separate terminals:
+Start separate terminal sessions for each core component:
 
-**Terminal 1 — API:**
-```bash
-cd lament-api && bun run dev
-```
-
-**Terminal 2 — Frontend:**
-```bash
-cd lament && bun run dev
-```
-
-Ensure the frontend's `.env` file points to the local API URL.
+- **Terminal 1 (Backend API)**: `cd lament-api && bun run dev`
+- **Terminal 2 (Frontend Client)**: `cd lament && bun run dev`
+- **Terminal 3 (Scraper Ingestion)**: `cd lament-scrapper && bun run dev`
