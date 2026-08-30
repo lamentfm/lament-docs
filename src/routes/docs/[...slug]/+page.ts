@@ -15,7 +15,7 @@ export const load: PageLoad = async ({ params }) => {
 		throw error(404, `Documentation page "${slug}" not found`);
 	}
 
-	const component = await getDocComponent(slug);
+	const component = getDocComponent(slug);
 	const sections = getDocSections();
 	const { prev, next } = getDocNavigation(slug);
 
