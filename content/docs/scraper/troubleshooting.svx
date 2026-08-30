@@ -1,61 +1,23 @@
 ---
-title: Troubleshooting
-description: Common scraper issues and solutions.
+title: Scraper Troubleshooting
+description: Common scraper pipeline errors, YouTube bot detection fixes, and database reconciliation.
 section: Scraper
 order: 4
 ---
 
-## Common Issues
+## Common Issues & Solutions
 
-### yt-dlp not found
+### 1. YouTube IP Rate Limiting (`HTTP 429 Too Many Requests`)
 
-```
-Error: yt-dlp not found
-```
+- **Symptom**: `yt-dlp` fails with `Sign in to confirm you’re not a bot`.
+- **Solution**: Export updated `cookies.txt` from browser session and place in `lament-scrapper/cookies.txt`, or pass `--cookies cookies.txt` in CLI.
 
-Ensure `yt-dlp` is installed and available in your `PATH`:
+### 2. Missing FFmpeg HLS Binary
 
-```bash
-# Install via pip
-pip install yt-dlp
+- **Symptom**: `ffmpeg: command not found` during segment packaging.
+- **Solution**: Ensure FFmpeg is installed on your OS path (`sudo apt install ffmpeg` or `brew install ffmpeg`).
 
-# Or via homebrew (macOS)
-brew install yt-dlp
-```
+### 3. Missing Last.fm Artist Photos
 
-### Spotify API rate limiting
-
-The Spotify API has rate limits. If you encounter `429 Too Many Requests`:
-
-- Wait for the retry-after period
-- Reduce batch size
-- Use longer delays between requests
-
-### R2 upload failures
-
-Check your R2 credentials in `.env`:
-
-```
-R2_ACCOUNT_ID=your_account_id
-R2_ACCESS_KEY_ID=your_access_key
-R2_SECRET_ACCESS_KEY=your_secret_key
-R2_BUCKET=your_bucket_name
-```
-
-### Duplicate detection
-
-The scraper uses `original_id` (Spotify track ID) for deduplication. If a track already exists, it will be skipped. To force re-import:
-
-```bash
-# Remove the track from the database first
-bun run db:do -- "DELETE FROM tracks WHERE original_id = 'spotify_id'"
-```
-
-### Database connection issues
-
-Verify your Turso credentials:
-
-```bash
-# Test connection
-bun run db:do -- "SELECT 1"
-```
+- **Symptom**: Artist record created with null `image_url`.
+- **Solution**: Supply `LASTFM_API_KEY` in `.env` and execute `bun run refresh-image:artists`.
