@@ -21,16 +21,16 @@ function slugToTitle(slug: string): string {
 		.join(' ');
 }
 
-function parseFrontmatter(raw: any): Partial<ApiEndpointFrontmatter> {
+function parseFrontmatter(raw: unknown): Partial<ApiEndpointFrontmatter> {
 	if (!raw) return {};
-	const rawString = typeof raw === 'string' ? raw : raw.default;
+	const rawString = typeof raw === 'string' ? raw : (raw as { default?: string })?.default;
 	if (typeof rawString !== 'string') return {};
 
 	try {
 		const match = rawString.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 		if (!match) return {};
 		const fm = match[1];
-		const data: Record<string, any> = {};
+		const data: Record<string, unknown> = {};
 		for (const line of fm.split('\n')) {
 			const colonIdx = line.indexOf(':');
 			if (colonIdx > -1) {
@@ -55,7 +55,11 @@ function parseFrontmatter(raw: any): Partial<ApiEndpointFrontmatter> {
 	}
 }
 
+let cachedApiPages: ApiDocPage[] | null = null;
+
 function parseApiModules(): ApiDocPage[] {
+	if (cachedApiPages) return cachedApiPages;
+
 	const modules = import.meta.glob('/content/api/**/*.{md,svx}', {
 		eager: true,
 		query: '?raw',
@@ -88,6 +92,7 @@ function parseApiModules(): ApiDocPage[] {
 	}
 
 	pages.sort((a, b) => a.frontmatter.order - b.frontmatter.order);
+	cachedApiPages = pages;
 	return pages;
 }
 
@@ -102,7 +107,6 @@ export function getApiBySlug(slug: string): ApiDocPage | undefined {
 export function getApiSections(): ApiSection[] {
 	const pages = getAllApiPages();
 
-	// For API docs, each page is its own "section" in the sidebar
 	return pages.map((page) => ({
 		title: page.frontmatter.title,
 		slug: page.slug,
@@ -126,14 +130,12 @@ export function getFirstApiSlug(): string {
 	return pages.length > 0 ? pages[0].slug : 'overview';
 }
 
-const apiComponentModules = import.meta.glob('/content/api/**/*.{md,svx}');
+const apiComponentModules = import.meta.glob('/content/api/**/*.{md,svx}', { eager: true }) as Record<string, MDModule>;
 
-export async function getApiComponent(slug: string) {
+export function getApiComponent(slug: string) {
 	const page = getApiBySlug(slug);
 	if (!page) return null;
-	const loaderKey = Object.keys(apiComponentModules).find(k => k.includes(page.slug));
-	const loader = loaderKey ? apiComponentModules[loaderKey] : null;
-	if (!loader) return null;
-	const mod = (await loader()) as MDModule;
-	return mod.default;
+	const loaderKey = Object.keys(apiComponentModules).find((k) => k.includes(page.slug));
+	const mod = loaderKey ? apiComponentModules[loaderKey] : null;
+	return mod ? mod.default : null;
 }
