@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
 	import type { DocPage, ApiDocPage } from '$lib/types/docs';
+	import { resolve } from '$app/paths';
 
 	let {
 		prev,
@@ -23,7 +24,7 @@
 	<div class="border-surface-2 mt-12 flex items-stretch gap-4 border-t pt-6">
 		{#if prev}
 			<a
-				href={getHref(prev)}
+				href={resolve(getHref(prev) as "/")}
 				class="group rounded-md border-surface-2 hover:border-surface-2 hover:bg-surface-1 flex flex-1 flex-col border px-4 py-3 transition-colors"
 			>
 				<span class="text-text-primary mb-1 flex items-center gap-1 text-xs">
@@ -40,7 +41,7 @@
 
 		{#if next}
 			<a
-				href={getHref(next)}
+				href={resolve(getHref(next) as "/")}
 				class="group rounded-md border-surface-2 hover:border-surface-2 hover:bg-surface-1 flex flex-1 flex-col items-end border px-4 py-3 transition-colors"
 			>
 				<span class="text-text-primary mb-1 flex items-center gap-1 text-xs">
