@@ -11,10 +11,10 @@ The scraper pipeline processes music catalog data in this order:
 
 ```mermaid
 flowchart TD
-    Metadata["1. Search Spotify / iTunes for Metadata"] --> Match["2. Match YouTube Audio Source"]
+    Metadata["1. Search Spotify / Last.fm / Deezer / iTunes for Metadata"] --> Match["2. Match YouTube Audio Source"]
     Match --> Extract["3. Direct yt-dlp Audio Extraction (Opus/AAC)"]
     Extract --> HLS["4. FFmpeg HLS Packaging (.m3u8 + .ts)"]
-    HLS --> Visual["5. Fetch Last.fm / Deezer Visual Assets"]
+    HLS --> Visual["5. Fetch Spotify / Last.fm / Deezer / iTunes Visual Assets"]
     Visual --> Sharp["6. Process WebP Image Variants via sharp"]
     Sharp --> Lyrics["7. Fetch Synced LRC & Plain Lyrics"]
     Lyrics --> R2["8. Upload HLS Audio & WebP Artwork to R2"]
