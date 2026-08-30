@@ -7,6 +7,8 @@
 	import DocsTableOfContents from '$lib/components/docs/DocsTableOfContents.svelte';
 	import ApiMethod from '$lib/components/docs/ApiMethod.svelte';
 	import { copyCodeBlocks } from '$lib/actions/copyCodeBlocks';
+	import { renderMermaid } from '$lib/actions/renderMermaid';
+	import { renderCallouts } from '$lib/actions/renderCallouts';
 
 	let { data }: { data: PageData } = $props();
 	let ContentComponent = $derived(data.component);
@@ -30,15 +32,17 @@
 </script>
 
 <svelte:head>
-	<title>{data.frontmatter.title} — Lament API</title>
+	<title>{data.frontmatter.title} - Lament API</title>
 	{#if data.frontmatter.description}
 		<meta name="description" content={data.frontmatter.description} />
 	{/if}
 </svelte:head>
 
-<div class="api-container flex flex-col md:flex-row items-start relative w-full max-w-[90rem] mx-auto">
+<div class="api-container relative mx-auto flex w-full max-w-360 flex-col items-start md:flex-row">
 	<!-- Sidebar -->
-	<aside class="api-sidebar hidden md:block sticky top-16 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto border-r border-surface-2">
+	<aside
+		class="api-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-surface-2 md:block"
+	>
 		<nav class="px-3 py-4" aria-label="API navigation">
 			<h4 class="mb-3 px-2 text-sm font-semibold tracking-wider text-text-primary uppercase">
 				API Reference
@@ -48,10 +52,10 @@
 					<li>
 						<a
 							href={resolve(`/api/${apiPage.slug}`)}
-							class="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-sm transition-colors {isActive(
+							class="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors {isActive(
 								apiPage.slug
 							)
-								? 'bg-[var(--color-accent-glow)] font-medium text-accent'
+								? 'bg-accent-glow font-medium text-accent'
 								: 'text-text-secondary hover:bg-surface-1 hover:text-text-primary'}"
 							aria-current={isActive(apiPage.slug) ? 'page' : undefined}
 						>
@@ -69,7 +73,7 @@
 	</aside>
 
 	<!-- Main content -->
-	<div class="flex-1 min-w-0 px-6 py-8 lg:px-10">
+	<div class="min-w-0 flex-1 px-6 py-8 lg:px-10">
 		<div class="mx-auto max-w-3xl">
 			<header class="mb-8">
 				<div class="flex items-center gap-3">
@@ -77,7 +81,7 @@
 						<ApiMethod method={data.frontmatter.method} />
 						<code class="text-sm font-medium text-text-primary">{data.frontmatter.endpoint}</code>
 						<button
-							class="ml-auto flex items-center justify-center rounded-[var(--radius-sm)] p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
+							class="ml-auto flex items-center justify-center rounded-sm p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
 							onclick={copyEndpoint}
 							aria-label="Copy endpoint"
 							title="Copy endpoint"
@@ -100,14 +104,19 @@
 				{/if}
 				{#if data.frontmatter.auth}
 					<div
-						class="mt-3 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-surface-1 px-2.5 py-1 text-xs text-[var(--color-secondary)]"
+						class="mt-3 inline-flex items-center gap-1.5 rounded-sm bg-surface-1 px-2.5 py-1 text-xs text-secondary"
 					>
 						<span>🔒</span> Requires authentication
 					</div>
 				{/if}
 			</header>
 
-			<article class="prose prose-sm md:prose-base max-w-none dark:prose-invert prose-headings:text-text-primary prose-a:text-accent hover:prose-a:text-accent-hover prose-p:text-text-secondary prose-strong:text-text-primary prose-code:text-accent prose-li:text-text-secondary prose-blockquote:text-text-muted prose-blockquote:border-surface-3 prose-pre:bg-surface-1 prose-pre:border-surface-2 prose-pre:text-[15px] prose-pre:leading-relaxed prose-th:text-text-primary prose-td:text-text-secondary" use:copyCodeBlocks>
+			<article
+				class="prose prose-sm max-w-none md:prose-base dark:prose-invert prose-headings:text-text-primary prose-p:text-text-secondary prose-a:text-accent hover:prose-a:text-accent-hover prose-blockquote:border-surface-3 prose-blockquote:text-text-muted prose-strong:text-text-primary prose-code:text-accent prose-code:before:content-none prose-code:after:content-none prose-pre:border-surface-2 prose-pre:bg-surface-1 prose-pre:text-[15px] prose-pre:leading-relaxed prose-li:text-text-secondary prose-th:text-text-primary prose-td:text-text-secondary"
+				use:copyCodeBlocks
+				use:renderMermaid
+				use:renderCallouts
+			>
 				{#if ContentComponent}
 					<ContentComponent />
 				{/if}
@@ -118,7 +127,9 @@
 	</div>
 
 	<!-- Right Sidebar (Table of Contents) -->
-	<aside class="hidden xl:block sticky top-16 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto border-l border-surface-2">
+	<aside
+		class="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-l border-surface-2 xl:block"
+	>
 		<DocsTableOfContents />
 	</aside>
 </div>
