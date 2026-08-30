@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { X } from 'lucide-svelte';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	let {
 		open = false,
@@ -55,17 +56,27 @@
 		<ul class="space-y-1">
 			{#each navItems as item (item.label)}
 				<li>
-					<a
-						href={item.href}
-						target={item.external ? '_blank' : undefined}
-						rel={item.external ? 'noopener noreferrer' : undefined}
-						onclick={handleNavigate}
-						class="rounded-md block px-3 py-2 text-sm transition-colors {isActive(item.href)
-							? 'bg-surface-1 text-text-primary font-medium'
-							: 'text-text-primary hover:bg-surface-1 hover:text-text-primary'}"
-					>
-						{item.label}
-					</a>
+					{#if item.external}
+						<a
+							href={item.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							onclick={handleNavigate}
+							class="rounded-md block px-3 py-2 text-sm transition-colors text-text-primary hover:bg-surface-1 hover:text-text-primary"
+						>
+							{item.label}
+						</a>
+					{:else}
+						<a
+							href={resolve(item.href as "/")}
+							onclick={handleNavigate}
+							class="rounded-md block px-3 py-2 text-sm transition-colors {isActive(item.href)
+								? 'bg-surface-1 text-text-primary font-medium'
+								: 'text-text-primary hover:bg-surface-1 hover:text-text-primary'}"
+						>
+							{item.label}
+						</a>
+					{/if}
 				</li>
 			{/each}
 		</ul>
