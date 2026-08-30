@@ -20,7 +20,9 @@ function getMermaidConfig() {
 			titleColor: isLight ? '#2b2926' : '#f2f0ec',
 			edgeLabelBackground: isLight ? '#eae5dc' : '#1e1e24'
 		},
-		securityLevel: 'loose'
+		securityLevel: 'loose',
+		flowchart: { useMaxWidth: false },
+		sequence: { useMaxWidth: false }
 	};
 }
 
@@ -44,7 +46,7 @@ export function renderMermaid(node: HTMLElement) {
 				const { svg } = await mermaid.render(id, text);
 				const container = document.createElement('div');
 				container.className =
-					'mermaid-container my-6 flex justify-center overflow-x-auto rounded-xl border border-surface-2 bg-surface-1/70 p-6 shadow-md backdrop-blur-md';
+					'mermaid-container my-6 flex justify-center items-start overflow-x-auto overflow-y-auto max-h-[75vh] rounded-xl border border-surface-2 bg-surface-1/70 p-6 shadow-md backdrop-blur-md';
 				container.innerHTML = svg;
 				pre.replaceWith(container);
 			} catch (err) {
