@@ -1,70 +1,99 @@
 ---
 title: Project Structure
-description: File and directory structure of each Lament repository.
+description: Detailed file and directory organization across all Lament ecosystem repositories.
 section: Development
 order: 1
 ---
 
-## Frontend (`lament`)
+## Overview
+
+The Lament ecosystem consists of standalone, decoupled repositories. Each service maintains its own package dependencies, build scripts, and configuration files.
+
+---
+
+## 1. Web Client (`lament`)
 
 ```
 lament/
 ├── src/
+│   ├── app.html                # HTML shell template
+│   ├── app.d.ts                # App-level TypeScript declarations
+│   ├── hooks.server.ts         # Server hooks (auth validation, error handling)
 │   ├── lib/
-│   │   ├── api.ts              # Client-side API utilities
+│   │   ├── api.ts              # Client-side fetch helper and endpoint methods
 │   │   ├── server/
-│   │   │   └── api.ts          # Server-side proxy module
-│   │   └── components/         # Svelte components
-│   ├── routes/
-│   │   ├── +layout.svelte      # Root layout
-│   │   ├── +page.svelte        # Home page
-│   │   ├── api/                # Server proxy endpoints
-│   │   ├── artists/            # Artist pages
-│   │   ├── albums/             # Album pages
-│   │   └── ...
-│   └── app.html
-├── static/
-├── svelte.config.js
-├── vite.config.ts
-└── package.json
+│   │   │   ├── api.ts          # Server-side API client module
+│   │   │   └── proxy.ts        # Request forwarding and header injection
+│   │   └── components/         # Svelte UI component library
+│   │       ├── ui/             # Base UI primitives (button, dialog, input)
+│   │       ├── player/         # Audio player control bar and lyrics viewer
+│   │       └── layout/         # Navigation sidebar and page headers
+│   └── routes/
+│       ├── +layout.svelte      # Main application layout container
+│       ├── +page.svelte        # Home dashboard page
+│       ├── api/                # Server-side proxy endpoints (+server.ts)
+│       ├── artists/            # Artist list and detail pages
+│       ├── albums/             # Album catalog and detail pages
+│       └── tracks/             # Track listing and detail pages
+├── static/                     # Static branding assets and web manifest
+├── svelte.config.js            # Svelte compiler configuration
+├── vite.config.ts              # Vite bundle configuration
+├── tailwind.config.js          # Tailwind CSS v4 setup
+└── package.json                # Dependencies and dev scripts
 ```
 
-## API (`lament-api`)
+---
+
+## 2. Edge API Backend (`lament-api`)
 
 ```
 lament-api/
 ├── src/
-│   ├── index.ts                # App entry, middleware
-│   ├── server.ts               # Dev server (Hono Node adapter)
+│   ├── index.ts                # Node/Bun development server entry point
+│   ├── index-edge.ts           # Cloudflare Workers edge entry point
+│   ├── server.ts               # Local dev server initialization
 │   ├── routes/
-│   │   ├── index.ts            # Route registration
-│   │   └── edge-routes.ts      # All edge route definitions
-│   ├── controllers/            # Request handlers
-│   ├── services/               # Business logic
-│   ├── middlewares/             # Auth, cache middleware
-│   ├── config/                 # Configuration
-│   ├── utils/                  # Utilities
-│   └── scripts/                # CLI scripts (migration, etc.)
-├── schema.sql                  # Database schema
-├── wrangler.jsonc              # Cloudflare Workers config
-└── package.json
+│   │   ├── index.ts            # Main Hono app routing export
+│   │   └── edge-routes.ts      # Endpoint mounting and route handlers
+│   ├── controllers/            # Business logic handlers
+│   │   ├── track.controller.ts # Track CRUD and random selection
+│   │   ├── artist.controller.ts# Artist queries and discography
+│   │   ├── album.controller.ts # Album tracklists
+│   │   ├── lyrics.controller.ts# LRC parsing and variant serving
+│   │   ├── stream.controller.ts# HLS playlist delivery and streaming
+│   │   └── client.controller.ts# API key administration
+│   ├── middlewares/
+│   │   ├── auth.middleware.ts  # x-api-key and X-Master-Key validation
+│   │   └── cache.middleware.ts # ETag and cache control headers
+│   ├── services/
+│   │   ├── cache.service.ts    # In-memory LRU cache manager
+│   │   └── lyric-parser.service.ts # LRC timestamp parser
+│   ├── config/
+│   │   └── db.ts               # LibSQL client factory
+│   └── utils/
+│       └── crypto.ts           # SHA-256 and key hash utilities
+├── schema.sql                  # LibSQL table definitions
+├── wrangler.jsonc              # Cloudflare Workers deployment config
+└── package.json                # Dependencies and dev scripts
 ```
 
-## Scraper (`lament-scrapper`)
+---
+
+## 3. Ingestion Pipeline (`lament-scrapper`)
 
 ```
 lament-scrapper/
 ├── src/
-│   ├── index.ts                # Main scraper entry
-│   ├── spotify.ts              # Spotify metadata fetcher
-│   ├── downloader.ts           # YouTube audio downloader
-│   ├── lyrics.ts               # Lyrics fetcher (Genius)
-│   ├── lastfm.ts               # Last.fm metadata
-│   ├── cloud.ts                # R2 upload logic
-│   ├── db.ts                   # Database operations
-│   ├── config.ts               # Configuration
-│   ├── scripts/                # Utility scripts
-│   └── services/               # Additional services
-├── schema.sql
-└── package.json
+│   ├── index.ts                # Main CLI entry point
+│   ├── spotify.ts              # Spotify API metadata query client
+│   ├── downloader.ts           # yt-dlp audio stream extractor
+│   ├── lyrics.ts               # Genius and LRC lyrics client
+│   ├── lastfm.ts               # Last.fm artist image scraper
+│   ├── cloud.ts                # Cloudflare R2 S3 storage client
+│   ├── db.ts                   # Database connection and queries
+│   └── services/
+│       ├── image.service.ts    # sharp WebP image resizing
+│       └── hls.service.ts      # FFmpeg HLS chunking service
+├── schema.sql                  # Local database schema copy
+└── package.json                # Dependencies and dev scripts
 ```
