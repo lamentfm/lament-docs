@@ -34,9 +34,9 @@ The core engine providing REST endpoints for all clients, built with **Hono** an
 The backend worker script and CLI tool responsible for catalog population and media enrichment.
 
 ### Key Features
-* **Metadata Extraction**: Searches Spotify and iTunes APIs for high-accuracy metadata (track titles, release years, ISRC, genre tags).
+* **Metadata Extraction**: Searches Spotify, Last.fm, Deezer, and iTunes APIs for high-accuracy metadata (track titles, release years, ISRC, genre tags).
 * **Direct Audio Rip**: Downloads highest quality Opus or AAC streams via `yt-dlp` without secondary re-encoding.
-* **Visual Asset Pipeline**: Scrapes high-resolution artist photography from Last.fm (`artist.getinfo`) and Deezer, processing them into WebP variants (`small`, `medium`, `large`, `original`) via `sharp`.
+* **Visual Asset Pipeline**: Scrapes high-resolution artist photography from Spotify, Last.fm, Deezer, and iTunes, processing them into WebP variants (`small`, `medium`, `large`, `original`) via `sharp`.
 * **LRC Lyric Parser**: Retrieves raw LRC text from Genius / synced lyric providers and converts them into structured JSON arrays with millisecond timestamp markers.
 
 ---
