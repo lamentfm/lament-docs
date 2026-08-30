@@ -1,60 +1,42 @@
 ---
-title: HLS Streaming
-description: HTTP Live Streaming implementation in Lament.
+title: HLS Audio Streaming
+description: HTTP Live Streaming implementation, Cloudflare R2 delivery, and gapless playback.
 section: Media
-order: 4
+order: 2
 ---
 
-## Overview
+## HLS Protocol Overview
 
-Lament uses **HLS (HTTP Live Streaming)** for audio delivery. This allows adaptive streaming and efficient caching.
+Lament uses **HTTP Live Streaming (HLS)** for audio playback. Rather than downloading monolithic audio files, tracks are split into index playlist files (`.m3u8`) and sequential 10-second audio segment files (`.ts`).
 
-## How HLS Works
+---
 
-1. Audio is split into small segments (`.ts` files)
-2. A manifest file (`.m3u8`) lists all segments with their duration
-3. The client downloads the manifest, then requests segments sequentially
-4. Segments are cached by CDN for efficient delivery
+## Edge Hotlink Protection Architecture
 
-## API Endpoints
+To prevent unauthorized external hotlinking of raw audio files stored on Cloudflare R2:
 
-```
-GET /stream/:id/playlist.m3u8
-```
+1. **Edge WAF Referer Rule**: Cloudflare WAF validates the `http.referer` header on all `/hls/` audio requests to ensure traffic originates from authorized client domains (`lament.rynds.my.id` or `localhost`).
+2. **Server Proxy Routing**: SvelteKit server routes proxy playlist requests (`/api/stream/:id/playlist.m3u8`), attaching client API keys server-side so credentials remain hidden from client browsers.
 
-Returns the HLS manifest for a track. The manifest contains relative URLs to segments.
+---
 
-```
-GET /stream/:id/:segment
-```
+## Client Integration (`HLS.js`)
 
-Returns an individual audio segment. These are served directly from R2 storage.
-
-## Frontend Integration
-
-The frontend uses `HLS.js` for playback:
+In the SvelteKit frontend client, `HLS.js` manages segment fetching and buffer strategy:
 
 ```typescript
 import Hls from 'hls.js';
 
-const hls = new Hls();
-hls.loadSource(`/api/stream/${trackId}/playlist.m3u8`);
-hls.attachMedia(audioElement);
-```
+if (Hls.isSupported()) {
+  const hls = new Hls({
+    enableWorker: true,
+    lowLatencyMode: true,
+    xhrSetup: (xhr) => {
+      xhr.setRequestHeader('x-api-key', clientApiKey);
+    }
+  });
 
-`HLS.js` handles:
-- Manifest parsing
-- Segment downloading and buffering
-- Error recovery
-- Playback state management
-
-## Storage Structure
-
-```
-R2: audio/{track-id}/
-├── playlist.m3u8
-├── segment-000.ts
-├── segment-001.ts
-├── segment-002.ts
-└── ...
+  hls.loadSource('/api/stream/trk_7f9a2b1c/playlist.m3u8');
+  hls.attachMedia(audioElement);
+}
 ```
