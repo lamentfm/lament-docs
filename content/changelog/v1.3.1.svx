@@ -51,3 +51,12 @@ Audited all database media files by downloading binary image buffers from Cloudf
 - **In-Memory IP Rate Limiter (`ratelimit.middleware.ts`)**: Integrated global LRUCache-backed rate limiter capping client IPs at 60 requests per minute (1 RPS average) to prevent Worker quota exhaustion and HTTP flood DDoS attacks.
 - **Obscured Security Headers**: Removed `X-RateLimit-*` response headers and numeric payload limits to prevent attackers from probing threshold boundaries.
 - **k6 Load Testing Suite (`tests/load/k6-loadtest.js`)**: Configured a lightweight 10-VU k6 load testing suite with npm shortcut `npm run test:load` for API performance validation.
+
+---
+
+## 6. Anti-Scraping Guards & Scroll UX Optimization (`lament`)
+
+- **Anti-Scraping Direct Access Guard (`hooks.server.ts`)**: Inspects `Sec-Fetch-Dest` and `Sec-Fetch-Mode` HTTP headers on all `/api/` endpoints to block direct browser URL address bar navigation (`sec-fetch-dest: document` or `sec-fetch-mode: navigate`) with HTTP 403 Forbidden.
+- **Strict Limit Capping**: Capped the `limit` query parameter in `/api/tracks`, `/api/albums`, and `/api/artists` to a maximum of 30 items per request to prevent bulk JSON data harvesting dumps.
+- **Instant Cached Image Display (`TrackCard.svelte`)**: Integrated `checkComplete` image action verifying `img.complete` on element mount to display browser-cached artwork instantly without re-animating fade-in opacity on virtual scroll remounts.
+- **Optimized Infinite Scroll (`tracks/+page.svelte`)**: Reduced scroll trigger threshold from 4000px to 800px and added a downward scroll direction check to avoid unnecessary pagination calls when scrolling upwards.
