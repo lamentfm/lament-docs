@@ -78,12 +78,12 @@ Lament deploys custom Cloudflare Web Application Firewall (WAF) expression rules
 (http.request.uri.path contains "/_profiler") or
 (http.request.uri.path contains "/telescope") or
 (http.request.uri.path contains "/console") or
-(http.request.uri.path contains "/hls/" and not http.referer contains "lament.rynds.my.id" and not http.referer contains "localhost")
+(http.request.uri.path contains "/hls/" and not (http.referer contains "lament.rynds.my.id" or http.referer contains "localhost" or http.referer contains "127.0.0.1" or http.referer == ""))
 ```
 
 Key features of this WAF block rule:
 
-- **Direct `/hls/` Hotlinking Protection**: Blocks direct requests to `/hls/` unless the request header `http.referer` contains the authorized domain (`lament.rynds.my.id`) or local dev server (`localhost`).
+- **Direct `/hls/` Hotlinking Protection**: Blocks direct requests to `/hls/` unless the request header `http.referer` contains the authorized domain (`lament.rynds.my.id`), local dev server (`localhost`), or native mobile apps (empty referer).
 - **Environment & Secret Defense**: Immediately drops requests probing for `.env`, `wp-config.php`, `id_rsa`, `credentials.json`, `secrets.yml`, `.aws/credentials`, `database.sqlite`, `dump.sql`, or `.bak` files.
 - **Admin & Vulnerability Probe Filtering**: Drops bot traffic scanning for `/wp-admin`, `/phpmyadmin`, `/actuator`, `/_profiler`, `/telescope`, or `/console`.
 
@@ -91,43 +91,45 @@ Key features of this WAF block rule:
 
 ## 2. Cloudflare Global Rate Limiting WAF Rule
 
-To protect all subdomains (`rynds.my.id`) under Cloudflare's single Rate Limiting rule constraint, Lament uses a targeted Rate Limiting rule that excludes static media assets (HLS audio segments and WebP artwork):
+To protect all subdomains (`rynds.my.id`) under Cloudflare's single Rate Limiting rule constraint, Lament uses a targeted Rate Limiting rule:
 
 ```sql
-(http.request.uri.path contains "/") and (http.host contains "rynds.my.id") and not (http.request.uri.path contains "/stream/") and not (http.request.uri.path.extension in {"ts" "webp" "png" "jpg" "jpeg"})
+http.host eq "api.lament.rynds.my.id"
 ```
 
 ### Rate Limiting Parameters:
-- **Rate Threshold**: `80 - 100 requests`
-- **Period**: `10 seconds`
-- **Action**: `Block` (or `Managed Challenge`) for `10 minutes`
+- **Rate Threshold**: `15 requests` per `10 seconds` per IP (or `60 requests` per `1 minute`)
+- **Action**: `Block (429)` or `Managed Challenge`
 
 > [!TIP]
-> By excluding `.ts` HLS audio transport segments and `.webp` artwork from counting towards the rate limit, listeners can smoothly load cover grids and stream HLS audio without triggering false-positive rate limit blocks.
+> Setting the Rate Limiter at the Cloudflare Edge network drops excessive bot spam and load-test flooding before requests reach Cloudflare Workers, keeping daily Worker request usage at 0.
 
 ---
 
-## 3. Constant-Time Key Comparison
+## 3. Anti-Scraping Direct Access Guard
+
+Frontend SvelteKit proxies inspect browser `Sec-Fetch-Dest` and `Sec-Fetch-Mode` HTTP headers on all `/api/` endpoints:
+
+- **Direct Browser Navigation Block**: Requests with `sec-fetch-dest: document` or `sec-fetch-mode: navigate` (triggered when a user types `/api/tracks` directly into a browser URL address bar) are immediately blocked with HTTP 403 Forbidden.
+- **Internal Fetch Passthrough**: Application `fetch()` calls (`sec-fetch-dest: empty` and `sec-fetch-mode: cors`) pass through seamlessly for authorized web app users.
+
+---
+
+## 4. Query & Limit Sanitization
+
+Pagination parameters (`?limit=`) are strictly capped (max 30 on frontend proxies, max 50 on backend API) to prevent bulk JSON data harvesting dumps.
+
+---
+
+## 5. Constant-Time Key Comparison
 
 To prevent timing side-channel attacks when verifying `X-Master-Key`, `auth.middleware.ts` uses Web Crypto HMAC constant-time binary comparison (`crypto.subtle.sign`).
 
 ---
 
-## 4. CORS Policy & Local Development
+## 6. CORS Policy & Local Development
 
 Allowed origins are dynamically validated at request time based on the `ALLOWED_ORIGINS` environment variable in production.
 
-- **Production Origins**: Only origins listed in `ALLOWED_ORIGINS` (e.g. `https://lament.rynds.my.id`) receive `Access-Control-Allow-Origin` headers. Unauthorized cross-origin requests receive an empty origin string, triggering browser CORS blocks.
-- **Local Development**: Origins matching `http://localhost:*` or `http://127.0.0.1:*` are automatically reflected in development to allow seamless local dev server communication with API endpoints.
-
----
-
-## 5. Direct Edge Delivery & Hotlink Protection
-
-Audio files and WebP images are served directly via Cloudflare R2 CDN (`cdn.lament.rynds.my.id`). Direct hotlinking is prevented at the edge using Cloudflare WAF referer validation rules, ensuring media assets can only be embedded by authorized client applications.
-
----
-
-## 6. Query & Limit Sanitization
-
-Pagination parameters (`?limit=` and `?offset=`) are strictly capped (`limit` min 1, max 100) to prevent database resource exhaustion attacks.
+- **Production Origins**: Only origins listed in `ALLOWED_ORIGINS` (`lament.rynds.my.id`, `docs.lament.rynds.my.id`, `dash.lament.rynds.my.id`) receive `Access-Control-Allow-Origin` headers.
+- **Local Development**: Origins matching `http://localhost:*` or `http://127.0.0.1:*` are automatically allowed in development to enable dev server communication.
