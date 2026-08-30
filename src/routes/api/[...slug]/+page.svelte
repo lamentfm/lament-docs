@@ -113,9 +113,6 @@
 
 			<article
 				class="prose prose-sm max-w-none md:prose-base dark:prose-invert prose-headings:text-text-primary prose-p:text-text-secondary prose-a:text-accent hover:prose-a:text-accent-hover prose-blockquote:border-surface-3 prose-blockquote:text-text-muted prose-strong:text-text-primary prose-code:text-accent prose-code:before:content-none prose-code:after:content-none prose-pre:border-surface-2 prose-pre:bg-surface-1 prose-pre:text-[15px] prose-pre:leading-relaxed prose-li:text-text-secondary prose-th:text-text-primary prose-td:text-text-secondary"
-				use:copyCodeBlocks
-				use:renderMermaid
-				use:renderCallouts
 			>
 				{#if ContentComponent}
 					<ContentComponent />
