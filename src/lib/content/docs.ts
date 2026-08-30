@@ -1,4 +1,4 @@
-import type { DocPage, DocSection, MDModule, DocFrontmatter, MDFormatter } from '$lib/types/docs';
+import type { DocPage, DocSection, MDModule, DocFrontmatter } from '$lib/types/docs';
 
 const SECTION_ORDER: Record<string, number> = {
 	'getting-started': 1,
@@ -29,16 +29,16 @@ function slugToTitle(slug: string): string {
 		.join(' ');
 }
 
-function parseFrontmatter(raw: any): Partial<DocFrontmatter> {
+function parseFrontmatter(raw: unknown): Partial<DocFrontmatter> {
 	if (!raw) return {};
-	const rawString = typeof raw === 'string' ? raw : raw.default;
+	const rawString = typeof raw === 'string' ? raw : (raw as { default?: string })?.default;
 	if (typeof rawString !== 'string') return {};
 
 	try {
 		const match = rawString.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 		if (!match) return {};
 		const fm = match[1];
-		const data: Record<string, any> = {};
+		const data: Record<string, unknown> = {};
 		for (const line of fm.split('\n')) {
 			const colonIdx = line.indexOf(':');
 			if (colonIdx > -1) {
@@ -63,7 +63,12 @@ function parseFrontmatter(raw: any): Partial<DocFrontmatter> {
 	}
 }
 
+let cachedPages: DocPage[] | null = null;
+let cachedSections: DocSection[] | null = null;
+
 function parseDocModules(): DocPage[] {
+	if (cachedPages) return cachedPages;
+
 	const modules = import.meta.glob('/content/docs/**/*.{md,svx}', {
 		eager: true,
 		query: '?raw',
@@ -74,14 +79,13 @@ function parseDocModules(): DocPage[] {
 
 	for (const [filepath, rawContent] of Object.entries(modules)) {
 		const filepathClean = filepath.replace('?raw', '');
-		// filepath: /content/docs/getting-started/installation.md or .svx
 		const relative = filepathClean.replace('/content/docs/', '').replace(/\.(md|svx)$/, '');
 		const parts = relative.split('/');
 
-		if (parts.length < 2) continue; // skip flat files without category
+		if (parts.length < 2) continue;
 
 		const category = parts[0];
-		const slug = relative; // e.g. "getting-started/installation"
+		const slug = relative;
 		const metadata = parseFrontmatter(rawContent);
 
 		if (metadata.draft) continue;
@@ -101,10 +105,13 @@ function parseDocModules(): DocPage[] {
 		});
 	}
 
+	cachedPages = pages;
 	return pages;
 }
 
 export function getDocSections(): DocSection[] {
+	if (cachedSections) return cachedSections;
+
 	const pages = parseDocModules();
 	const sectionMap = new Map<string, DocSection>();
 
@@ -126,6 +133,7 @@ export function getDocSections(): DocSection[] {
 		section.pages.sort((a, b) => a.frontmatter.order - b.frontmatter.order);
 	}
 
+	cachedSections = sections;
 	return sections;
 }
 
@@ -153,14 +161,12 @@ export function getFirstDocSlug(): string {
 	return pages.length > 0 ? pages[0].slug : 'getting-started/installation';
 }
 
-const docComponentModules = import.meta.glob('/content/docs/**/*.{md,svx}');
+const docComponentModules = import.meta.glob('/content/docs/**/*.{md,svx}', { eager: true }) as Record<string, MDModule>;
 
-export async function getDocComponent(slug: string) {
+export function getDocComponent(slug: string) {
 	const page = getDocBySlug(slug);
 	if (!page) return null;
-	const loaderKey = Object.keys(docComponentModules).find(k => k.includes(page.slug));
-	const loader = loaderKey ? docComponentModules[loaderKey] : null;
-	if (!loader) return null;
-	const mod = (await loader()) as MDModule;
-	return mod.default;
+	const loaderKey = Object.keys(docComponentModules).find((k) => k.includes(page.slug));
+	const mod = loaderKey ? docComponentModules[loaderKey] : null;
+	return mod ? mod.default : null;
 }
