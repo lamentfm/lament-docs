@@ -1,0 +1,83 @@
+---
+title: "v1.3.0 - Practical Edge Optimization, Direct R2 CDN & WAF Hotlink Enforcement"
+date: "2024-08-30"
+version: "v1.3.0"
+---
+
+# v1.3.0 - Practical Edge Optimization, Direct R2 CDN & WAF Hotlink Enforcement
+
+> [!IMPORTANT]
+> **Phase 3: The Practical Edge Era**: Offloading HLS audio segment proxying to Cloudflare R2 CDN, enforcing Cloudflare Custom WAF firewall rules to block unauthorized scrapers at the edge, deploying the SvelteKit frontend on Cloudflare Pages, and running a 90-day Spotify Premium metadata harvesting sprint.
+
+---
+
+## 1. Edge Architecture Paradigm Shift
+
+As listener traffic scaled, the v1.2.0 decision to **proxy 100% of HLS audio segments (`.ts`) and WebP cover artwork through backend Workers** using dynamic UUID tokens created an infrastructure bottleneck:
+
+- Each active listener generated **5,000 to 10,000 Worker requests per day** (since every 2-4 second audio chunk triggered a backend Worker proxy call).
+- With Cloudflare Workers' free-tier limit of **100,000 requests/day**, only **10 to 20 active daily users** would completely exhaust the daily Worker quota.
+
+In **v1.3.0**, the architecture transitioned to **Direct Edge CDN Delivery** paired with **Zero-Trust Cloudflare Edge WAF Protection**:
+
+```mermaid
+flowchart TD
+    Client["SvelteKit App on Cloudflare Pages (lament)"] -->|1. Fetch Manifest /stream/:id/playlist.m3u8| Hono["Hono API (Workers)"]
+    Hono -->|2. Return Direct R2 CDN URLs| Client
+    Client -->|3. Direct Segment Request GET /hls/*.ts| WAF["Cloudflare Custom WAF Rules"]
+    WAF -->|4. Valid CORS / API Keys| R2["Cloudflare R2 Storage (cdn.lament.rynds.my.id)"]
+    WAF -- 403 Forbidden --> Blocked["Hotlinker / Scraping Bot"]
+    Client -->|5. Playback Finish Event| Webhook["POST /now-playing"]
+    Webhook --> DB["Increment t.play_count in Turso LibSQL"]
+```
+
+---
+
+## 2. Feature & System Breakdown
+
+### A. Direct R2 CDN Audio Streaming (`lament-api` & `lament`)
+- **Worker Proxy Bypass**: HLS playlists (`.m3u8`) and Transport Stream audio segments (`.ts`) are delivered directly via Cloudflare R2 CDN (`cdn.lament.rynds.my.id`).
+- **Popularity Tracking Webhook**: Added `POST /now-playing` endpoint. Listener playback triggers a lightweight background webhook to update `t.play_count` in the database without proxying audio payload bytes through Workers.
+
+### B. Edge WAF Protection & Rate Limiting (Cloudflare Firewall)
+- **Custom WAF Block Rule**: Header and origin validations were offloaded from Workers to the **Cloudflare Custom WAF** layer:
+  ```text
+  (http.request.uri.path contains "/hls/" and not http.referer contains "lament.rynds.my.id" and not http.referer contains "localhost")
+  ```
+- **Hotlink & Bot Prevention**: Requests from third-party sites or unauthenticated scraping bots lacking valid `x-api-key` or `x-master-key` headers are dropped directly at the Cloudflare Edge network.
+
+### C. Levenshtein Fuzzy Search Engine & Scoring Matrix (`lament-api`)
+- **Levenshtein Distance Matrix (`fuzzy.ts`)**: Fuzzy string matching on artist names (max distance 3) and categories/genres (max distance 2).
+- **Tokenized Single-Word Matching**: Single-word queries (`q`) compare against individual word tokens to avoid length-penalty mismatches.
+#### 4-Tier Relevance Score Matrix
+
+| Match Tier | Score Weight | Description |
+| --- | --- | --- |
+| **Title Match** | **100** | Match on track title (`tracks.title LIKE %q%`) |
+| **Artist Match** | **80** | Artist name match via Levenshtein fuzzy lookup |
+| **Category Match** | **60** | Category/genre match via Levenshtein fuzzy lookup |
+| **Lyric Match** | **30** | Full-text substring match inside lyrics (`lyrics.content LIKE %q%`) |
+- **Multi-Tier Tiebreaker**: Search results are strictly sorted via `ORDER BY relevance_score DESC, t.play_count DESC, t.created_at DESC`.
+
+### D. Track Recommendation Engine (`getRecommendations`)
+- **Category Overlap Weighting**: Counts overlapping categories/genres between tracks (`COUNT(tc.category_id) as shared_categories`).
+- **Popularity Fallback**: If no category matches exist, falls back to popular tracks ordered by `t.play_count DESC, RANDOM()`.
+
+### E. 90-Day Spotify Premium Batch Scraping Sprint (`lament-scrapper`)
+- **Spotify Premium API Integration**: Acquired a 3-month Spotify Premium subscription to batch-scrape high-resolution metadata, album artwork, and artist photography before Web API restrictions enforce strict limits.
+- **Synchronized LRC Lyrics (LRCLIB Integration)**: Integrated LRCLIB API for precise LRC timestamps `[mm:ss.xx]`.
+- **8-Stage Content Sanitization (`cleanGeniusContent`)**: Strips HTML tags, *"Read More"*, *"X Contributors"*, *"Translations"*, section headers `[Verse 1]`, `[Chorus]`, and duplicate song titles.
+- **Proportional Timing Fallback Algorithm**: Plain text lyrics (unsynced) automatically receive estimated timestamp tags:
+  ```text
+  step = durationMs / (plainLines.length + 1)
+  timestamp[i] = floor(step * (i + 1))
+  ```
+
+### F. Size-Based Image Variant Architecture
+- **Size-Based Image Variants**: Standardized image array schema to Spotify-style variants (`small`: 64px, `medium`: 300px, `large`: 640px, `original`).
+- **Automated WebP Compression**: The `migrate:webp` utility script in `lament-scrapper` compresses legacy artwork into WebP format.
+
+### G. Multi-Client Ecosystem Expansion
+- **SvelteKit Web Player on Cloudflare Pages (`lament`)**: Deployed frontend web player on Cloudflare Pages (`lament.rynds.my.id`) with Svelte 5 Runes state management and global edge caching.
+- **Flutter Mobile App (`lament-mobile`)**: Expanded API endpoints to support Android & iOS Flutter applications with local HLS caching.
+- **Documentation Portal (`lament-docs`)**: Portal built with SvelteKit 5 Runes, client-side Mermaid flowchart rendering, and theme-compliant GitHub callouts.
