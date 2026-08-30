@@ -1,30 +1,32 @@
 ---
 title: Installation
-description: Install and configure Lament locally.
+description: Install and configure the Lament multi-repository ecosystem locally using Bun.
 section: Getting Started
 order: 1
 ---
 
 ## Prerequisites
 
-Before installing Lament, ensure you have the following installed:
+Lament is engineered to run natively on the **Bun** JavaScript runtime for high throughput and rapid startup.
 
-- **Node.js** 18+ or **Bun** 1.0+
+- **Bun** 1.0+ (Required)
 - **Git**
-- A package manager (`bun` recommended)
+- **FFmpeg** (Required for audio processing in `lament-scrapper`)
 
-## Clone the repositories
+## Ecosystem Repositories
 
-The Lament ecosystem consists of multiple repositories under the [lamentfm](https://github.com/lamentfm) GitHub organization:
+The Lament project is split across separate specialized repositories under the [lamentfm](https://github.com/lamentfm) organization:
 
 ```bash
-git clone https://github.com/lamentfm/lament.git
-git clone https://github.com/lamentfm/lament-api.git
-git clone https://github.com/lamentfm/lament-scrapper.git
-git clone https://github.com/lamentfm/lament-docs.git
+git clone https://github.com/lamentfm/lament.git          # SvelteKit Web Client
+git clone https://github.com/lamentfm/lament-api.git      # Closed Hono Edge REST API
+git clone https://github.com/lamentfm/lament-scrapper.git # Audio Scraper & HLS Processor
+git clone https://github.com/lamentfm/lament-docs.git     # SvelteKit Documentation App
 ```
 
-## Install dependencies
+## Install Dependencies
+
+Run `bun install` inside each repository root:
 
 ### Frontend Client (`lament`)
 
@@ -40,33 +42,33 @@ cd lament-api
 bun install
 ```
 
-### Scraper (`lament-scrapper`)
+### Scraper Pipeline (`lament-scrapper`)
 
 ```bash
 cd lament-scrapper
 bun install
 ```
 
-### Documentation (`lament-docs`)
+### Documentation App (`lament-docs`)
 
 ```bash
 cd lament-docs
 bun install
 ```
 
-## Verify installation
+## Start Development Servers
 
-Each project can be started in development mode:
+Each service runs independently with hot-reloading via Bun:
 
 ```bash
-# Frontend
+# SvelteKit Web Client
 cd lament && bun run dev
 
-# API
+# Hono Edge API
 cd lament-api && bun run dev
 
-# Docs
+# Documentation Site
 cd lament-docs && bun run dev
 ```
 
-See [Local Development](/docs/getting-started/local-development) for details on running the full stack.
+See [Local Development](/docs/getting-started/local-development) for environment variable configurations.
