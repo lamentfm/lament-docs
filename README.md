@@ -2,6 +2,10 @@
 
 Official documentation, architecture guides, and API reference for the **Lament** audio streaming ecosystem.
 
+> [!IMPORTANT]
+> **Private Infrastructure & API Notice**
+> Lament is a private, non-open-source project. The backend API is strictly closed to third-party public access to maintain system integrity, protect limited server capacity, and stay within Edge quota allocations.
+
 ## Stack
 
 - **Framework**: SvelteKit (Svelte 5 Runes)
