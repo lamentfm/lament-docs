@@ -1,66 +1,53 @@
 ---
 title: Streaming
-description: HLS audio streaming endpoints.
+description: HLS audio streaming and playlist manifest delivery endpoints.
 section: Streaming
-order: 7
+order: 6
 method: GET
 endpoint: /stream/:id/playlist.m3u8
 ---
 
-## Get HLS Playlist
+## Get HLS Playlist Manifest
 
-```
+```http
 GET /stream/:id/playlist.m3u8
 ```
 
-Returns the HLS manifest file for a track. No authentication required.
+Returns an HLS `.m3u8` playlist manifest referencing audio segment URLs.
 
-### Path Parameters
+### Headers
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `id` | string | Track ID |
+- `Authorization`: `Bearer <client_api_key>` (or `x-api-key`)
 
-### Response
+### Response (`200 OK`)
 
-Returns `application/vnd.apple.mpegurl` content:
+**Content-Type**: `application/vnd.apple.mpegurl`
 
-```
+```http
 #EXTM3U
+#EXT-X-VERSION:3
 #EXT-X-TARGETDURATION:10
-#EXTINF:10.0,
-segment-000.ts
-#EXTINF:10.0,
-segment-001.ts
-...
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10.000,
+https://cdn.lament.rynds.my.id/hls/trk_7f9a2b1c/segment0.ts
+#EXTINF:10.000,
+https://cdn.lament.rynds.my.id/hls/trk_7f9a2b1c/segment1.ts
 #EXT-X-ENDLIST
 ```
 
-## Get Audio Segment
+> [!NOTE]
+> Audio segments are hosted directly on Cloudflare R2 object storage (`cdn.lament.rynds.my.id`). Direct unauthorized external hotlinking is blocked at the Cloudflare edge via WAF Referer validation rules.
 
+---
+
+## Stream HLS Segment
+
+```http
+GET /hls/:id/:segment
 ```
-GET /stream/:id/:segment
-```
 
-Returns an individual HLS audio segment. No authentication required.
+Serves raw `.ts` audio segment files directly from Cloudflare R2 object storage.
 
-### Path Parameters
+### Response (`200 OK`)
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `id` | string | Track ID |
-| `segment` | string | Segment filename (e.g., `segment-000.ts`) |
-
-### Response
-
-Returns `video/mp2t` binary data.
-
-## Usage with HLS.js
-
-```javascript
-import Hls from 'hls.js';
-
-const hls = new Hls();
-hls.loadSource('/stream/track-uuid/playlist.m3u8');
-hls.attachMedia(audioElement);
-```
+**Content-Type**: `video/mp2ts` (MPEG-2 Transport Stream audio)
