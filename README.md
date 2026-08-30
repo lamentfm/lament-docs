@@ -9,11 +9,4 @@ Official documentation, architecture guides, and API reference for the **Lament*
 - **Styling**: TailwindCSS v4
 - **Deployment**: Cloudflare Pages
 
-## Development
-
-```bash
-bun install
-bun run dev
-```
-
 Built for [Lament](https://lament.rynds.my.id).
