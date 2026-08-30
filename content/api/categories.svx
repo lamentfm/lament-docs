@@ -1,6 +1,6 @@
 ---
 title: Categories
-description: Track category endpoints.
+description: Music category and genre listing endpoints.
 section: Categories
 order: 10
 method: GET
@@ -9,25 +9,29 @@ endpoint: /categories
 
 ## List Categories
 
-```
+```http
 GET /categories
 ```
 
-Returns all available track categories/genres.
+### Headers
 
-### Response
+- `x-api-key`: `<your_client_api_key>` (or `Authorization: Bearer <key>`)
+
+### Response (`200 OK`)
 
 ```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "name": "Rock",
-      "slug": "rock",
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "cat_indie",
+    "name": "Indie",
+    "slug": "indie",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": "cat_pop",
+    "name": "Pop",
+    "slug": "pop",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
 ```
-
-Categories are used to classify tracks via the `track_categories` junction table.
