@@ -13,7 +13,7 @@
 		Activity
 	} from 'lucide-svelte';
 
-	let { mode }: { mode?: string } = $props();
+
 	let hoveredNode: string | null = $state(null);
 
 	const nodes = [
@@ -250,7 +250,7 @@
 			>
 
 			<!-- Connection Lines -->
-			{#each connections as conn}
+			{#each connections as conn (conn.from + '-' + conn.to)}
 				{@const active = isActiveConnection(conn)}
 				{@const dimmed = hoveredNode && !active}
 
@@ -283,7 +283,7 @@
 		</svg>
 
 		<!-- HTML Nodes Layer -->
-		{#each nodes as node}
+		{#each nodes as node (node.id)}
 			{@const connected = !hoveredNode || isConnected(hoveredNode, node.id)}
 			<!-- svelte-ignore a11y_mouse_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -348,7 +348,7 @@
 				>CLIENT SPACE</span
 			>
 			<div class="grid grid-cols-1 gap-3">
-				{#each nodes.filter((n) => n.y === 100) as node}
+				{#each nodes.filter((n) => n.y === 100) as node (node.id)}
 					<div class="flex flex-col rounded-md border border-surface-2 bg-surface-0 p-3 shadow-sm">
 						<div class="mb-2 flex items-center gap-1.5">
 							<node.icon size={14} class="text-text-muted" />
@@ -373,7 +373,7 @@
 				>APP BOUNDARY</span
 			>
 			<div class="grid grid-cols-1 gap-3">
-				{#each nodes.filter((n) => n.y === 360) as node}
+				{#each nodes.filter((n) => n.y === 360) as node (node.id)}
 					<div
 						class="relative flex flex-col rounded-md border border-surface-3 bg-surface-0 p-3 shadow-sm"
 					>
@@ -405,7 +405,7 @@
 				>EDGE INFRASTRUCTURE</span
 			>
 			<div class="grid grid-cols-1 gap-3">
-				{#each nodes.filter((n) => n.y === 620) as node}
+				{#each nodes.filter((n) => n.y === 620) as node (node.id)}
 					<div class="flex flex-col rounded-md border border-surface-2 bg-surface-0 p-3 shadow-sm">
 						<div class="mb-2 flex items-center gap-1.5">
 							<node.icon size={14} class="text-text-muted" />
