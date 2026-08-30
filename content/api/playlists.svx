@@ -1,74 +1,66 @@
 ---
 title: Playlists
-description: Playlist management endpoints.
+description: Playlist creation and track association management endpoints.
 section: Playlists
 order: 9
 method: GET
 endpoint: /playlists/:id
-auth: true
 ---
 
 ## Get Playlist
 
-```
+```http
 GET /playlists/:id
 ```
 
-Returns a playlist by ID with its tracks.
+### Headers
 
-## List My Playlists
+- `x-api-key`: `<your_client_api_key>` (or `Authorization: Bearer <key>`)
 
+### Response (`200 OK`)
+
+```json
+{
+  "id": "pl_12345",
+  "name": "Indie Pop Selection",
+  "description": "Koleksi lagu indie pop pilihan.",
+  "tracks": [
+    {
+      "id": "trk_7f9a2b1c",
+      "title": "Jatuh Suka",
+      "artist_name": "Tulus",
+      "duration": 224
+    }
+  ]
+}
 ```
-GET /playlists/me
-```
 
-Returns playlists owned by the authenticated user. Requires master authentication.
+---
 
-## Create Playlist
+## Create Playlist (Master Only)
 
-```
+```http
 POST /playlists
 ```
 
-Requires master authentication.
+### Headers
+
+- `X-Master-Key`: `<your_master_secret>`
 
 ### Request Body
 
 ```json
 {
-  "name": "My Playlist",
-  "description": "Optional description"
+  "name": "Senja & Kopi",
+  "description": "Lagu santai untuk menemani sore."
 }
 ```
 
-## Update Playlist
-
-```
-PUT /playlists/:id
-```
-
-Requires master authentication.
-
-## Delete Playlist
-
-```
-DELETE /playlists/:id
-```
-
-Requires master authentication.
-
-## Playlist Tracks
-
-```
-POST /playlist-tracks       # Add track to playlist
-DELETE /playlist-tracks      # Remove track from playlist
-```
-
-### Add Track
+### Response (`201 Created`)
 
 ```json
 {
-  "playlist_id": "uuid",
-  "track_id": "uuid"
+  "id": "pl_67890",
+  "name": "Senja & Kopi"
 }
 ```
