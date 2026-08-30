@@ -1,80 +1,207 @@
 ---
-title: Database
-description: Database schema and operations in Lament.
+title: Database Schema Reference
+description: Complete column-by-column database schema reference for all 12 LibSQL / Turso tables in Lament.
 section: Development
 order: 4
 ---
 
-## Database Engine
+## Engine & Connection
 
-Lament uses **LibSQL** hosted on **Turso** for its database. The client library is `@libsql/client`.
+Lament uses **LibSQL** (SQLite edge engine) hosted on **Turso** (`@libsql/client`). All tables and relationships are defined in `schema.sql`.
 
-## Schema
+---
 
-The database schema is defined in `schema.sql`:
+## Complete Table Specifications
 
-### Core Tables
+### 1. `artists` (Artist Metadata)
 
-**`artists`** — Music artist records.
+Stores catalog artist profiles and scraper image origin tags.
 
-| Column | Type | Description |
-| --- | --- | --- |
-| `id` | TEXT PK | UUID |
-| `name` | TEXT | Artist name |
-| `slug` | TEXT UNIQUE | URL slug |
-| `image_url` | TEXT | Artist image URL |
-| `image_source` | TEXT | Image provider |
-| `created_at` | TEXT | Timestamp |
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique artist UUID (e.g. `art_3d8e1f`) |
+| `name` | TEXT | NOT NULL | Artist display name |
+| `slug` | TEXT | UNIQUE, NOT NULL | URL-safe slug (e.g. `tulus`) |
+| `image_url` | TEXT | NULL | Processed CDN image URL |
+| `image_source` | TEXT | NULL | Provider source tag (`lastfm`, `deezer`, `spotify`) |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
 
-**`albums`** — Album records linked to artists.
+---
 
-| Column | Type | Description |
-| --- | --- | --- |
-| `id` | TEXT PK | UUID |
-| `artist_id` | TEXT FK | Reference to artists |
-| `title` | TEXT | Album title |
-| `slug` | TEXT | URL slug |
-| `cover_url` | TEXT | Cover image URL |
-| `year` | INTEGER | Release year |
-| `type` | TEXT | Album type |
+### 2. `albums` (Album Collections)
 
-**`tracks`** — Individual music tracks.
+Stores album metadata linked to artists.
 
-| Column | Type | Description |
-| --- | --- | --- |
-| `id` | TEXT PK | UUID |
-| `artist_id` | TEXT FK | Reference to artists |
-| `album_id` | TEXT FK | Reference to albums |
-| `title` | TEXT | Track title |
-| `audio_url` | TEXT | HLS playlist URL |
-| `duration` | INTEGER | Duration in seconds |
-| `source` | TEXT | Audio source (default: youtube) |
-| `original_id` | TEXT UNIQUE | Spotify/YouTube ID for dedup |
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique album UUID |
+| `artist_id` | TEXT | FOREIGN KEY (artists.id) | Primary artist ID |
+| `title` | TEXT | NOT NULL | Album title |
+| `slug` | TEXT | NOT NULL | URL-safe slug |
+| `cover_url` | TEXT | NULL | Album cover artwork CDN URL |
+| `cover_source` | TEXT | NULL | Cover image source provider |
+| `year` | INTEGER | NULL | Release year |
+| `type` | TEXT | NOT NULL | Collection type (`album`, `ep`, `single`) |
+| `description` | TEXT | NULL | Album description notes |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
 
-**`lyrics`** — Lyrics with language and variant support.
+---
 
-| Column | Type | Description |
-| --- | --- | --- |
-| `id` | TEXT PK | UUID |
-| `track_id` | TEXT FK | Reference to tracks |
-| `language` | TEXT | Language code (en, id, jp) |
-| `variant` | TEXT | original, translated, romanized, synced |
-| `content` | TEXT | Lyrics content |
+### 3. `categories` (Genres & Tags)
 
-### Relationship Tables
+Stores music categories and genre classifications.
 
-- **`track_categories`** — Many-to-many: tracks ↔ categories
-- **`track_artists`** — Many-to-many: tracks ↔ artists (for features/collaborations)
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique category UUID |
+| `name` | TEXT | NOT NULL | Category display name (e.g. `Indie Pop`) |
+| `slug` | TEXT | UNIQUE, NOT NULL | URL-safe slug |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
 
-### System Tables
+---
 
-- **`clients`** — API client keys with `key_hash` and `is_active` status
-- **`requests`** — User song request queue with `status` tracking (pending/done/rejected)
-- **`maintenance`** — System maintenance state
+### 4. `tracks` (Core Audio Catalog)
 
-## Migrations
+Core table for music tracks, audio formats, bitrates, and anti-duplication IDs.
 
-Run migrations with:
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique track UUID |
+| `artist_id` | TEXT | NOT NULL, FK (artists.id) | Primary artist ID |
+| `album_id` | TEXT | NULL, FK (albums.id) | Parent album ID |
+| `title` | TEXT | NOT NULL | Track title |
+| `slug` | TEXT | NOT NULL | URL-safe slug |
+| `original_id` | TEXT | UNIQUE | Anti-duplication ID (`yt_<id>` or Spotify ID) |
+| `provider_url` | TEXT | NULL | Original source URL |
+| `audio_url` | TEXT | NOT NULL | HLS playlist pointer (`hls:<track_id>`) |
+| `cover_url` | TEXT | NULL | Track cover artwork URL |
+| `cover_source` | TEXT | NULL | Artwork provider source |
+| `duration` | INTEGER | NULL | Duration in seconds |
+| `bitrate` | INTEGER | NULL | Source audio bitrate (e.g. `160`) |
+| `format` | TEXT | NULL | Audio container format (`m4a`, `webm`) |
+| `status` | TEXT | DEFAULT 'ready' | Ingestion status (`pending`, `ready`, `failed`) |
+| `source` | TEXT | DEFAULT 'youtube' | Ingestion source provider |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+
+---
+
+### 5. `lyrics` (Timed & Plain Lyrics)
+
+Stores synchronized LRC timestamped lines and translated lyrics.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique lyric UUID |
+| `track_id` | TEXT | NOT NULL, FK (tracks.id CASCADE) | Target track ID |
+| `language` | TEXT | DEFAULT 'en' | ISO language code (`en`, `id`, `jp`) |
+| `variant` | TEXT | DEFAULT 'original' | Variant type (`original`, `synced`, `translated`, `romanized`) |
+| `content` | TEXT | NOT NULL | Raw LRC content with timestamp tags |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+
+---
+
+### 6. `track_categories` (Track-Category Junction)
+
+Many-to-many relationship mapping tracks to categories.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `track_id` | TEXT | PK, FK (tracks.id CASCADE) | Target track ID |
+| `category_id` | TEXT | PK, FK (categories.id CASCADE) | Target category ID |
+
+---
+
+### 7. `track_artists` (Track-Artist Collaborations)
+
+Many-to-many relationship mapping featured artists to tracks.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `track_id` | TEXT | PK, FK (tracks.id CASCADE) | Target track ID |
+| `artist_id` | TEXT | PK, FK (artists.id CASCADE) | Featured artist ID |
+
+---
+
+### 8. `clients` (API Credentials)
+
+Stores authorized client application keys and clearance levels.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Client UUID |
+| `name` | TEXT | NOT NULL | Client application name |
+| `contact` | TEXT | NULL | Owner contact email or handle |
+| `key_hash` | TEXT | UNIQUE, NOT NULL | SHA-256 hash of API key |
+| `is_active` | INTEGER | DEFAULT 1 | Active flag (`1` enabled, `0` disabled) |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Last update timestamp |
+
+---
+
+### 9. `playlists` (User & Curated Playlists)
+
+Stores playlist collections created by users or master admins.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Unique playlist UUID |
+| `title` | TEXT | NOT NULL | Playlist title |
+| `description` | TEXT | NULL | Playlist summary text |
+| `user_id` | TEXT | NOT NULL | Owner user ID |
+| `cover_url` | TEXT | NULL | Playlist cover image URL |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
+
+---
+
+### 10. `playlist_tracks` (Playlist Track Association)
+
+Maps tracks inside playlists with sequence order.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `playlist_id` | TEXT | PK, FK (playlists.id CASCADE) | Playlist UUID |
+| `track_id` | TEXT | PK, FK (tracks.id CASCADE) | Track UUID |
+| `added_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Track addition timestamp |
+
+---
+
+### 11. `requests` (Song Ingestion Queue)
+
+Stores track request queries submitted by listeners.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY | Request UUID |
+| `query` | TEXT | NOT NULL | Search query (e.g. `Tulus - Monokrom`) |
+| `status` | TEXT | DEFAULT 'pending' | Ingestion status (`pending`, `done`, `rejected`) |
+| `metadata` | TEXT | NULL | Additional request JSON payload |
+| `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Submission timestamp |
+
+---
+
+### 12. `maintenance` (Circuit Breaker State)
+
+Stores system-wide maintenance mode switches.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `id` | TEXT | PRIMARY KEY DEFAULT 'global' | Global singleton ID |
+| `lament` | INTEGER | DEFAULT 0 | Web frontend maintenance flag (`1` on, `0` off) |
+| `lament_api` | INTEGER | DEFAULT 0 | Edge API maintenance flag (`1` on, `0` off) |
+| `description` | TEXT | DEFAULT '' | Maintenance reason displayed to clients |
+| `updated_at` | TEXT | NULL | Last modification timestamp |
+
+---
+
+## Database Indexes
+
+- `idx_lyrics_track_id`: Index on `lyrics(track_id)` for high-speed lyric lookups.
+
+---
+
+## Migrations & Local Schema Push
+
+Push schema updates to Turso database:
 
 ```bash
 cd lament-api
