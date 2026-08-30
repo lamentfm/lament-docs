@@ -1,54 +1,133 @@
 ---
 title: Security Practices
-description: Security best practices for the Lament project.
+description: Security hardened headers, CORS policy, Cloudflare WAF rules, Rate Limiting, and input sanitization in Lament.
 section: Security
 order: 3
 ---
 
-## Proxy Architecture
+## Security Hardening Measures
 
-The most important security practice in Lament is the **proxy architecture**. The frontend never communicates directly with the backend API.
+### 1. Cloudflare WAF Custom Block Rules
 
+Lament deploys custom Cloudflare Web Application Firewall (WAF) expression rules to immediately drop requests targeting sensitive paths, environment configurations, SSH keys, database dumps, admin probes, and unauthorized `/hls/` hotlinking.
+
+```sql
+(http.request.uri.path contains "/.env") or
+(http.request.uri.path contains "/.git/config") or
+(http.request.uri.path contains "/.git/HEAD") or
+(http.request.uri.path contains "/wp-config.php") or
+(http.request.uri.path contains "/.htaccess") or
+(http.request.uri.path contains "/.htpasswd") or
+(http.request.uri.path contains "/.ssh/id_rsa") or
+(http.request.uri.path contains "/.aws/credentials") or
+(http.request.uri.path contains "/docker-compose.yml") or
+(http.request.uri.path contains "/web.config") or
+(http.request.uri.path contains "/id_rsa") or
+(http.request.uri.path contains "/credentials.json") or
+(http.request.uri.path contains "/secrets.yml") or
+(http.request.uri.path contains "/secrets.yaml") or
+(http.request.uri.path contains "/.npmrc") or
+(http.request.uri.path contains "/.gitlab-ci.yml") or
+(http.request.uri.path contains "/cmd_") or
+(http.request.uri.path contains "/cmd.") or
+(http.request.uri.path contains "/shell") or
+(http.request.uri.path contains "/phpmyadmin") or
+(http.request.uri.path contains "/xmlrpc.php") or
+(http.request.uri.path contains "/wp-admin") or
+(http.request.uri.path contains "/wp-login") or
+(http.request.uri.path contains "/eval-stdin") or
+(http.request.uri.path contains "/vendor/") or
+(http.request.uri.path contains "/composer.") or
+(http.request.uri.path contains "/backup") or
+(http.request.uri.path contains "/install.php") or
+(http.request.uri.path contains "/setup.php") or
+(http.request.uri.path contains "/admin.php") or
+(http.request.uri.path contains "/configuration.php") or
+(http.request.uri.path contains "/.svn/") or
+(http.request.uri.path contains "/.DS_Store") or
+(http.request.uri.path contains ".sql") or
+(http.request.uri.path contains ".bak") or
+(http.request.uri.path contains ".old") or
+(http.request.uri.path contains "/phpunit/") or
+(http.request.uri.path contains "/.vscode/") or
+(http.request.uri.path contains "/.idea/") or
+(http.request.uri.path contains "database.sqlite") or
+(http.request.uri.path contains "/.env.local") or
+(http.request.uri.path contains "/.env.production") or
+(http.request.uri.path contains "/.env.backup") or
+(http.request.uri.path contains "/.git/") or
+(http.request.uri.path contains "/.hg/") or
+(http.request.uri.path contains "/.aws/config") or
+(http.request.uri.path contains "/.azure/") or
+(http.request.uri.path contains "/.docker/config.json") or
+(http.request.uri.path contains "/.kube/config") or
+(http.request.uri.path contains "serviceaccount.json") or
+(http.request.uri.path contains "/.netrc") or
+(http.request.uri.path contains "/.travis.yml") or
+(http.request.uri.path contains "/.circleci/") or
+(http.request.uri.path contains "/.yarnrc") or
+(http.request.uri.path contains "Pipfile") or
+(http.request.uri.path contains "dump.sql") or
+(http.request.uri.path contains ".sql.gz") or
+(http.request.uri.path contains ".mdb") or
+(http.request.uri.path contains "jwt.json") or
+(http.request.uri.path contains "auth.json") or
+(http.request.uri.path contains "/actuator") or
+(http.request.uri.path contains "/server-status") or
+(http.request.uri.path contains "/server-info") or
+(http.request.uri.path contains "/_profiler") or
+(http.request.uri.path contains "/telescope") or
+(http.request.uri.path contains "/console") or
+(http.request.uri.path contains "/hls/" and not http.referer contains "lament.rynds.my.id" and not http.referer contains "localhost")
 ```
-Browser → SvelteKit Server → Hono API
+
+Key features of this WAF block rule:
+
+- **Direct `/hls/` Hotlinking Protection**: Blocks direct requests to `/hls/` unless the request header `http.referer` contains the authorized domain (`lament.rynds.my.id`) or local dev server (`localhost`).
+- **Environment & Secret Defense**: Immediately drops requests probing for `.env`, `wp-config.php`, `id_rsa`, `credentials.json`, `secrets.yml`, `.aws/credentials`, `database.sqlite`, `dump.sql`, or `.bak` files.
+- **Admin & Vulnerability Probe Filtering**: Drops bot traffic scanning for `/wp-admin`, `/phpmyadmin`, `/actuator`, `/_profiler`, `/telescope`, or `/console`.
+
+---
+
+## 2. Cloudflare Global Rate Limiting WAF Rule
+
+To protect all subdomains (`rynds.my.id`) under Cloudflare's single Rate Limiting rule constraint, Lament uses a targeted Rate Limiting rule that excludes static media assets (HLS audio segments and WebP artwork):
+
+```sql
+(http.request.uri.path contains "/") and (http.host contains "rynds.my.id") and not (http.request.uri.path contains "/stream/") and not (http.request.uri.path.extension in {"ts" "webp" "png" "jpg" "jpeg"})
 ```
 
-This ensures:
-- API keys are never exposed in client-side JavaScript
-- CORS is controlled at the API level
-- Server-side validation happens before API calls
+### Rate Limiting Parameters:
+- **Rate Threshold**: `80 - 100 requests`
+- **Period**: `10 seconds`
+- **Action**: `Block` (or `Managed Challenge`) for `10 minutes`
 
-## CORS
+> [!TIP]
+> By excluding `.ts` HLS audio transport segments and `.webp` artwork from counting towards the rate limit, listeners can smoothly load cover grids and stream HLS audio without triggering false-positive rate limit blocks.
 
-The API configures CORS via the `ALLOWED_ORIGINS` environment variable:
+---
 
-```typescript
-app.use('*', cors({
-  origin: (origin) => {
-    const allowed = (process.env.ALLOWED_ORIGINS || '')
-      .split(',').map(o => o.trim()).filter(Boolean);
-    return allowed.includes(origin) ? origin : null;
-  },
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true
-}));
-```
+## 3. Constant-Time Key Comparison
 
-## Password Hashing
+To prevent timing side-channel attacks when verifying `X-Master-Key`, `auth.middleware.ts` uses Web Crypto HMAC constant-time binary comparison (`crypto.subtle.sign`).
 
-Client API keys are hashed with `bcryptjs` before storage.
+---
 
-## Input Validation
+## 4. CORS Policy & Local Development
 
-Controllers validate input parameters before processing. Invalid inputs return appropriate HTTP error codes.
+Allowed origins are dynamically validated at request time based on the `ALLOWED_ORIGINS` environment variable in production.
 
-## Maintenance Mode
+- **Production Origins**: Only origins listed in `ALLOWED_ORIGINS` (e.g. `https://lament.rynds.my.id`) receive `Access-Control-Allow-Origin` headers. Unauthorized cross-origin requests receive an empty origin string, triggering browser CORS blocks.
+- **Local Development**: Origins matching `http://localhost:*` or `http://127.0.0.1:*` are automatically reflected in development to allow seamless local dev server communication with API endpoints.
 
-The maintenance system allows disabling the API during updates:
+---
 
-```bash
-curl -X PUT -H "X-Master-Key: key" \
-  -H "Content-Type: application/json" \
-  -d '{"lament_api": true, "description": "Updating..."}' \
-  https://api.lament.rynds.my.id/maintenance
-```
+## 5. Direct Edge Delivery & Hotlink Protection
+
+Audio files and WebP images are served directly via Cloudflare R2 CDN (`cdn.lament.rynds.my.id`). Direct hotlinking is prevented at the edge using Cloudflare WAF referer validation rules, ensuring media assets can only be embedded by authorized client applications.
+
+---
+
+## 6. Query & Limit Sanitization
+
+Pagination parameters (`?limit=` and `?offset=`) are strictly capped (`limit` min 1, max 100) to prevent database resource exhaustion attacks.
