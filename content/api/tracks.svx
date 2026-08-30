@@ -1,6 +1,6 @@
 ---
 title: Tracks
-description: Track management and retrieval endpoints.
+description: Detailed specification for track retrieval, listing, recommendations, counting, and management endpoints.
 section: Tracks
 order: 2
 method: GET
@@ -9,85 +9,205 @@ endpoint: /tracks
 
 ## List Tracks
 
-```
-GET /tracks
+```http
+GET /tracks?limit=20&offset=0&q=Jatuh%20Suka
 ```
 
-Returns a paginated list of tracks.
+Returns a paginated list of tracks matching criteria. Supports ETag validation (returns `304 Not Modified` when `If-None-Match` header matches).
+
+### Headers
+
+- `x-api-key`: `<your_client_api_key>` (or `Authorization: Bearer <key>`)
 
 ### Query Parameters
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `offset` | integer | `0` | Items to skip |
-| `limit` | integer | `20` | Items per page |
+| Parameter | Type | Default | Constraints | Description |
+| --- | --- | --- | --- | --- |
+| `limit` | integer | `100` | Min `1`, Max `100` | Max items per page |
+| `offset` | integer | `0` | Min `0` | Number of items to skip |
+| `q` | string | `null` | Optional | Case-insensitive title search query |
 
-### Response
+### Response (`200 OK`)
 
 ```json
-{
-  "data": [
-    {
-      "id": "uuid",
-      "title": "Track Title",
-      "slug": "track-title",
-      "artist_id": "uuid",
-      "album_id": "uuid",
-      "audio_url": "https://...",
-      "cover_url": "https://...",
-      "duration": 240,
-      "source": "youtube",
-      "created_at": "2024-01-01T00:00:00Z"
+[
+  {
+    "id": "trk_7f9a2b1c",
+    "title": "Jatuh Suka",
+    "slug": "jatuh-suka",
+    "duration": 224,
+    "album_id": "alb_9c4b2a",
+    "album": {
+      "title": "Manusia"
+    },
+    "artists": [
+      {
+        "id": "art_3d8e1f",
+        "name": "Tulus"
+      }
+    ],
+    "audio_url": "https://api.lament.rynds.my.id/stream/trk_7f9a2b1c/playlist.m3u8",
+    "images": {
+      "small": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_small.webp",
+      "medium": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_medium.webp",
+      "large": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_large.webp",
+      "original": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_original.webp"
     }
-  ],
-  "total": 100
-}
+  }
+]
 ```
 
-## Get Track
+---
 
-```
+## Get Track Details
+
+```http
 GET /tracks/:id
 ```
 
-Returns a single track by ID.
+Fetches complete metadata for a single track by ID.
+
+### Response (`200 OK`)
+
+```json
+{
+  "id": "trk_7f9a2b1c",
+  "title": "Jatuh Suka",
+  "slug": "jatuh-suka",
+  "duration": 224,
+  "bitrate": 160,
+  "format": "m4a",
+  "source": "youtube",
+  "provider_url": "https://music.youtube.com/watch?v=example_yt_id",
+  "original_id": "yt_example_yt_id",
+  "status": "ready",
+  "created_at": "2024-03-15T10:30:00Z",
+  "album": {
+    "id": "alb_9c4b2a",
+    "title": "Manusia",
+    "slug": "manusia",
+    "year": 2022
+  },
+  "artists": [
+    {
+      "id": "art_3d8e1f",
+      "name": "Tulus",
+      "slug": "tulus"
+    }
+  ],
+  "audio_url": "https://api.lament.rynds.my.id/stream/trk_7f9a2b1c/playlist.m3u8",
+  "images": {
+    "small": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_small.webp",
+    "medium": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_medium.webp",
+    "large": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_large.webp",
+    "original": "https://cdn.lament.rynds.my.id/covers/trk_7f9a2b1c_original.webp"
+  }
+}
+```
+
+---
+
+## Get Track Recommendations Algorithm
+
+```http
+GET /tracks/:id/recommendations?limit=20
+```
+
+Calculates recommended tracks matching the current track using category similarity weighting and popularity boosting.
+
+```mermaid
+flowchart TD
+    Req["GET /tracks/:id/recommendations"] --> SharedCategory["1. Join track_categories to find shared categories"]
+    SharedCategory --> Weight["2. Count shared_categories per candidate track"]
+    Weight --> Sort["3. Sort by shared_categories DESC -> play_count DESC -> RANDOM()"]
+    Sort --> CheckResults{"Found Matches?"}
+    CheckResults -- Yes --> ReturnRecs["Return Ranked Recommendations"]
+    CheckResults -- No --> FallbackPopular["Fallback: Top Tracks by play_count DESC + RANDOM()"]
+```
+
+### Recommendation Parameters
+
+| Parameter | Type | Default | Constraints | Description |
+| --- | --- | --- | --- | --- |
+| `limit` | integer | `20` | Min `1`, Max `50` | Number of recommendations to return |
+
+---
 
 ## Get Random Tracks
 
-```
-GET /tracks/random
+```http
+GET /tracks/random?limit=10
 ```
 
-Returns a random selection of tracks.
+Returns a daily seeded randomized selection of ready tracks for radio and discovery playlists.
 
-## Count Tracks
+---
 
-```
+## Count Ready Tracks
+
+```http
 GET /tracks/count
 ```
 
-Returns the total number of tracks in the database.
+### Response (`200 OK`)
 
-## Create Track
-
+```json
+{
+  "total": 1450
+}
 ```
+
+---
+
+## Create Track (Master Only)
+
+```http
 POST /tracks
 ```
 
-Creates a new track. Requires authentication.
+### Headers
 
-## Update Track
+- `X-Master-Key`: `<your_master_secret>`
+- `Content-Type`: `application/json`
 
+### Request Body
+
+```json
+{
+  "title": "Hati-Hati di Jalan",
+  "artist_id": "art_3d8e1f",
+  "album_id": "alb_9c4b2a",
+  "audio_url": "hls:trk_8e2b1a9c",
+  "cover_url": "https://cdn.lament.rynds.my.id/covers/trk_8e2b1a9c.webp",
+  "duration": 242,
+  "bitrate": 160,
+  "format": "m4a",
+  "original_id": "yt_d9f8a2b",
+  "provider_url": "https://music.youtube.com/watch?v=d9f8a2b"
+}
 ```
+
+### Response (`201 Created`)
+
+```json
+{
+  "id": "trk_8e2b1a9c",
+  "status": "ready"
+}
+```
+
+---
+
+## Update Track (Master Only)
+
+```http
 PUT /tracks/:id
 ```
 
-Updates an existing track. Requires authentication.
+---
 
-## Delete Track
+## Delete Track (Master Only)
 
-```
+```http
 DELETE /tracks/:id
 ```
-
-Deletes a track. Requires authentication.
