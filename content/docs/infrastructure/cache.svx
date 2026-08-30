@@ -1,44 +1,67 @@
 ---
-title: Cache
-description: Caching strategies in Lament.
+title: Caching Strategy
+description: Multi-tier caching architecture spanning Cloudflare Edge CDN, SvelteKit server proxy, and browser client cache.
 section: Infrastructure
 order: 3
 ---
 
-## Overview
+## Multi-Tier Caching Architecture
 
-Lament uses a multi-tiered caching strategy:
+Lament implements an end-to-end caching pipeline spanning three distinct layers: Cloudflare Edge CDN server cache, SvelteKit frontend server proxy, and local browser client cache.
 
-1. **LRU in-memory cache** — Server-side cache in the API
-2. **HTTP cache headers** — Browser and CDN caching
-3. **Client-side cache** — In-memory cache in the frontend
+```mermaid
+flowchart TD
+    Browser["Browser Client Cache (max-age=3600)"] -->|Cache Miss| CDN["Cloudflare Edge CDN Cache (s-maxage=86400)"]
+    CDN -->|Cache Miss| Proxy["SvelteKit Server Proxy (+server.ts)"]
+    Proxy -->|API Request| LRU["In-Memory LRU Backend Cache (86400s)"]
+    LRU -->|Cache Miss| Storage["Turso LibSQL Database / R2 Storage"]
+```
 
-## API Cache
+---
 
-The API uses `lru-cache` for in-memory caching of frequently accessed data:
+## 1. Cloudflare Edge CDN Server Cache (`s-maxage`)
+
+Cloudflare POPs cache static media assets and API payloads at edge locations worldwide to minimize origin server load.
+
+- **Audio Transport Segments (`.ts`)**: Cached immutably at Cloudflare edge POPs (`Cache-Control: public, max-age=31536000, immutable`).
+- **WebP Cover Artwork & Artist Photos**: Cached globally with long TTL (`s-maxage=86400`).
+- **Lyrics & API Endpoints**: Cached at Cloudflare edge via `s-maxage=86400` directive.
+
+---
+
+## 2. SvelteKit Frontend Server Proxy Layer (`lament`)
+
+The SvelteKit frontend server acts as a proxy shield between client browsers and `lament-api`. Server endpoints (`+server.ts`) inspect upstream responses and inject cache control headers:
 
 ```typescript
-import { LRUCache } from 'lru-cache';
-
-const cache = new LRUCache<string, unknown>({
-  max: 500,
-  ttl: 1000 * 60 * 5 // 5 minutes
+// Example from src/routes/api/lyrics/[trackId]/+server.ts
+setHeaders({
+  'cache-control': 'public, max-age=3600, s-maxage=86400'
 });
 ```
 
-## Cache Headers
+- **`s-maxage=86400`**: Directs Cloudflare Edge CDN to cache the response for 24 hours.
+- **`max-age=3600`**: Directs the listener's browser to store the response locally for 1 hour.
 
-The `cacheHeaders` middleware applies cache-control headers to public endpoints:
+### HLS Manifest Handling
 
-```typescript
-app.use('/tracks/*', cacheHeaders);
-app.use('/artists/*', cacheHeaders);
-app.use('/albums/*', cacheHeaders);
-app.use('/playlists/*', cacheHeaders);
-app.use('/search', cacheHeaders);
-app.use('/categories', cacheHeaders);
-```
+- **Playlist Index (`playlist.m3u8`)**: SvelteKit proxies playlist index requests and rewrites relative segment URLs through `/api/stream/[id]/[file]` so API keys remain protected server-side.
 
-## Frontend Cache
+---
 
-The SvelteKit frontend implements client-side caching in `src/lib/api.ts` with custom TTLs per endpoint to prevent redundant network requests.
+## 3. Browser Client Cache (`max-age` & ETag)
+
+Client browsers (`lament` web player) cache resources locally in HTTP disk and memory cache to ensure instant UI transitions and uninterrupted audio playback.
+
+- **Local Media Caching**: Browsers cache processed WebP images and `.ts` audio segments locally (`max-age=3600` to `max-age=86400`).
+- **ETag Validation (`304 Not Modified`)**: API listing endpoints compute MD5/SHA hashes of payload data. When the browser sends `If-None-Match: <etag>`, the server short-circuits execution and returns HTTP 304 with zero body payload.
+
+---
+
+## 4. In-Memory Backend LRU Cache (`CacheService`)
+
+`lament-api` maintains an in-memory LRU (Least Recently Used) cache store:
+
+- **Key Patterns**: `cache:tracks:list`, `cache:artists:<id>`, `lyrics:<track_id>:<variant>`
+- **TTL**: High-frequency read queries are cached for 24 hours (86,400 seconds).
+- **Instant Invalidation**: Mutation endpoints (`POST /tracks`, `PUT /artists/:id`) invoke `CacheService.delete()` to purge stale entries instantly.
