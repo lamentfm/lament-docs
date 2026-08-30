@@ -1,38 +1,81 @@
 ---
-title: Lyrics
-description: Lyrics storage and retrieval in Lament.
+title: Lyrics Architecture
+description: LRC timestamp parsing, Genius content sanitization, proportional timing fallback, and AI forced-alignment calibration.
 section: Media
 order: 3
 ---
 
-## Data Model
+## Lyric Storage & Schema
 
-Lyrics are stored in the `lyrics` table with multi-language and variant support:
+Lyrics are stored in the database `lyrics` table supporting multiple variants per track (`original`, `romanized`, `translated`).
 
-| Field | Description |
-| --- | --- |
-| `track_id` | Reference to the track |
-| `language` | Language code (`en`, `id`, `jp`, etc.) |
-| `variant` | `original`, `translated`, `romanized`, `synced` |
-| `content` | The lyrics text content |
+---
 
-## API Endpoints
+## Content Sanitization Pipeline (`cleanGeniusContent`)
 
+Raw lyrics scraped from external sources (e.g. Genius, Musixmatch, Last.fm) pass through a 8-stage cleaning pipeline before parsing:
+
+```mermaid
+flowchart TD
+    Raw["Raw Scraped Lyrics"] --> HTML["1. Strip HTML tags (<div/>, <img/>)"]
+    HTML --> ReadMore["2. Remove 'Read More' blocks"]
+    ReadMore --> Contributors["3. Strip 'X Contributors' & 'Translations' headers"]
+    Contributors --> Headers["4. Remove generic 'Lyrics' headers"]
+    Headers --> Sections["5. Strip Section Labels ([Verse 1], [Chorus])"]
+    Sections --> Title["6. Deduplicate duplicate song titles at top"]
+    Title --> Trim["7. Normalize CRLF / LF line endings"]
+    Trim --> Clean["8. Pure Lyric Lines Array"]
 ```
-GET /tracks/:id/lyrics    → Get lyrics for a track
-POST /tracks/:id/lyrics   → Add a lyrics variant
-GET /lyrics/:id           → Get lyrics by ID
-DELETE /lyrics/:lyricId   → Delete a lyrics entry
+
+---
+
+## LRC Parsing & Timestamp Calculation (`parseLRC`)
+
+Raw LRC strings with time tags (e.g. `[01:23.45] Line text`) are parsed by `lyric-parser.service.ts` into normalized millisecond objects:
+
+1. **Timestamp Extraction**: Matched via regex `\[(\d+):(\d+)(?:\.(\d+))?\]`.
+2. **Millisecond Normalization**: Minutes (`m`), seconds (`s`), and fractional milliseconds (`ms`) are converted to absolute milliseconds (`t`):
+   ```text
+   t = (m * 60 + s) * 1000 + ms
+   ```
+3. **Title Token Highlighting**: Words matching the song title are tokenized and flagged (`highlight: true`) for client UI animations.
+4. **Chronological Sorting**: Lines are sorted in ascending order by timestamp (`a.t - b.t`).
+
+---
+
+## Proportional Timing Fallback Algorithm
+
+When lyrics exist only as **plain text** without LRC timestamps, `lament-api` dynamically calculates estimated timestamps based on the total track duration (`durationMs`):
+
+```text
+step = durationMs / (plainLines.length + 1)
+timestamp[i] = floor(step * (i + 1))
 ```
 
-## Sources
+### Fallback Calculation Example:
+For a 180-second track (180,000 ms) with 9 plain lyric lines:
+- `step` = `180,000 / (9 + 1) = 18,000 ms` (18 seconds per line).
+- Line 1 $\to$ 18,000 ms, Line 2 $\to$ 36,000 ms, Line 3 $\to$ 54,000 ms, etc.
 
-Lyrics are fetched from **Genius** via the `genius-lyrics` package during the scraping process.
+> [!TIP]
+> This proportional timing algorithm guarantees that even unsynced plain text lyrics trigger progressive scrolling and line highlighting in web and mobile karaoke views.
 
-## Multiple Variants
+---
 
-A single track can have multiple lyrics entries:
-- Original language lyrics
-- Translated versions
-- Romanized versions (for non-Latin scripts)
-- Time-synced lyrics (for karaoke-style display)
+## Variant Resolution & Fallback Logic
+
+When a client queries `GET /lyrics/:id?variant=romanized`:
+
+```mermaid
+flowchart TD
+    Request["GET /lyrics/:id?variant=romanized"] --> CheckCache{"Cache Hit in Redis/LRU?"}
+    CheckCache -- Yes --> ReturnCache["Return Cached JSON"]
+    CheckCache -- No --> DB["Query DB for track_id"]
+    DB --> MatchVariant{"Match Requested Variant?"}
+    MatchVariant -- Found --> Parse["Parse LRC & Proportional Timing"]
+    MatchVariant -- Not Found --> FallbackOriginal{"Variant 'original' Exists?"}
+    FallbackOriginal -- Yes --> Parse
+    FallbackOriginal -- No --> Error404["Return 404 No Lyrics Found"]
+    Parse --> SaveCache["Cache Response (86,400s)"]
+    SaveCache --> ReturnJSON["Return JSON Response"]
+```
