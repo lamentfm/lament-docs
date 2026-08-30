@@ -19,7 +19,7 @@ Rather than a monolithic codebase, Lament is decoupled into specialized reposito
 | --- | --- | --- | --- |
 | `lament` | Web Frontend Client | SvelteKit, Svelte 5, Tailwind CSS v4, HLS.js | SSR, reactive player, glassmorphism UI, server-side API proxying |
 | `lament-api` | Edge REST Backend | Hono, Cloudflare Workers, Turso LibSQL, R2 | Dual-layer auth, ETag caching, HLS manifests, maintenance flags |
-| `lament-scrapper` | Ingestion Pipeline | Node.js, Bun, `yt-dlp`, `sharp`, Spotify API, Last.fm, Deezer | Audio extraction without re-encoding, image optimization, LRC parsing |
+| `lament-scrapper` | Ingestion Pipeline | Node.js, Bun, `yt-dlp`, `sharp`, Spotify, Last.fm, Deezer, iTunes | Audio extraction without re-encoding, image optimization, LRC parsing |
 | `lament-docs` | Documentation App | SvelteKit, Svelte 5, MDsveX | Complete developer reference, architecture specs, and API contracts |
 | `lament-mobile` | Mobile Client | Flutter, Dart | Native iOS and Android player with offline cache support |
 | `lament-admin` | Management Portal | SvelteKit, Tailwind CSS | Content management, client key administration, and analytics |
