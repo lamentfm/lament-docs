@@ -18,7 +18,7 @@ export const load: PageLoad = async ({ params }) => {
 	const allPages = getAllApiPages();
 	const { prev, next } = getApiNavigation(slug);
 
-	const component = await getApiComponent(slug);
+	const component = getApiComponent(slug);
 
 	return {
 		component,
