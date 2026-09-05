@@ -25,7 +25,7 @@ Re-architected the search backend to support high-performance full-text search a
 - **Single-Shot Batch Roundtrip (`db.batch([...], 'read')`)**:
   - Consolidated tracks, albums, and artists into 1 single HTTP request to Turso Cloud (Tokyo), eliminating 4 sequential internet roundtrips.
   - Integrated `json_group_array` to resolve artist relations in a single query without cartesian join multiplication.
-- **In-Memory Fuzzy Artist Cache (<1ms)**:
+- **In-Memory Fuzzy Artist Cache (sub-1ms)**:
   - Cached all database artists in server memory with a 5-minute TTL, executing Levenshtein typo-tolerant matching in pure RAM.
 - **Frontend Optimization (`SearchModal.svelte`)**:
   - Integrated `AbortController` to cancel in-flight HTTP requests when the user types quickly.
