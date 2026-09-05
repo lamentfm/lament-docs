@@ -63,5 +63,38 @@ Client browsers (`lament` web player) cache resources locally in HTTP disk and m
 `lament-api` maintains an in-memory LRU (Least Recently Used) cache store:
 
 - **Key Patterns**: `cache:tracks:list`, `cache:artists:<id>`, `lyrics:<track_id>:<variant>`
-- **TTL**: High-frequency read queries are cached for 24 hours (86,400 seconds).
+- **TTL**: High-frequency read queries are cached for 24 hours (86,400 seconds). Search queries are cached for 60 seconds.
 - **Instant Invalidation**: Mutation endpoints (`POST /tracks`, `PUT /artists/:id`) invoke `CacheService.delete()` to purge stale entries instantly.
+
+---
+
+## 5. Version-Based Cache Busting (`?v=${updated_at}`)
+
+To completely eliminate stale media playback and eliminate manual Cloudflare R2 cache purges, all media asset URLs are dynamically versioned:
+
+- **Audio & Cover Versioning**: `transformAudioUrl` and `formatImageVariants` append `?v=${updated_at}` (or Unix epoch) to all CDN URLs:
+  ```text
+  https://cdn.lament.rynds.my.id/hls/trk_123/playlist.m3u8?v=1788609521650
+  https://cdn.lament.rynds.my.id/images/covers/trk_123_medium.webp?v=1788609521650
+  ```
+- **Zero-Purge Instant Invalidation**: When audio or artwork is updated on R2, the updated `updated_at` timestamp immediately bypasses Cloudflare Edge CDN cache and local browser disk cache without requiring manual purges in the Cloudflare dashboard.
+
+---
+
+## 6. Real-Time Catalog Auto-Sync Architecture
+
+Lament keeps listeners' browser clients continuously synchronized with the backend music catalog in real-time:
+
+```mermaid
+flowchart TD
+    Mutation["Scraper / Admin inserts Track"] --> DBTrigger["1. Turso Trigger (tracks_catalog_ai)"]
+    DBTrigger --> SystemMeta["2. Bumps catalog_version in system_meta"]
+    SystemMeta --> SyncPoll["3. SvelteKit Client polls /api/sync/version every 30s"]
+    SyncPoll --> VersionMismatch{"New Version Detected?"}
+    VersionMismatch -- Yes --> Invalidate["4. Purge client memory & persistentCache + invalidateAll()"]
+    Invalidate --> Toast["5. Notify User: 'Katalog musik diperbarui ✨'"]
+    VersionMismatch -- No --> Idle["Keep Serving Cached Data"]
+```
+
+- **Database-Level Trigger**: Turso automatically increments `catalog_version` in `system_meta` whenever tracks are added, updated, or deleted.
+- **Frontend Sync Store (`sync.svelte.ts`)**: Background polling runs every 30 seconds and on tab focus (`visibilitychange`). When a new version is detected, all local client stores and page data caches are refreshed seamlessly.
