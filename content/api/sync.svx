@@ -1,0 +1,51 @@
+---
+title: Sync
+description: Real-time music catalog versioning and synchronization endpoint for client cache invalidation.
+section: Sync
+order: 11
+method: GET
+endpoint: /sync/version
+---
+
+## Get Catalog Sync Version
+
+```http
+GET /sync/version
+```
+
+Returns the active `catalog_version` timestamp from the database. Client applications (such as SvelteKit web players and mobile apps) poll this public endpoint to detect newly scraped tracks, metadata edits, or catalog updates, and invalidate stale local storage without requiring manual cache purges.
+
+---
+
+## Public Access Notice
+
+> [!NOTE]
+> This endpoint is publicly accessible and does not require an `x-api-key` header, enabling lightweight background polling across edge workers and web clients.
+
+---
+
+## Response (`200 OK`)
+
+```json
+{
+  "version": 1788609521650,
+  "timestamp": 1788609521650
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `version` | number | Unix millisecond timestamp representing the active catalog version state |
+| `timestamp` | number | Timestamp of the response |
+
+---
+
+## Frontend Integration Pattern
+
+In the SvelteKit frontend (`lament`), the `sync.svelte.ts` store polls this endpoint every 30 seconds and on tab focus (`visibilitychange`). If `version` differs from the stored version:
+
+1. Invalidate SvelteKit page data via `invalidateAll()`.
+2. Clear in-memory track cache and `persistentCache`.
+3. Display a subtle UI toast: *"Katalog musik diperbarui"*.
