@@ -11,7 +11,8 @@ const SECTION_ORDER: Record<string, number> = {
 	streaming: 7,
 	playlists: 8,
 	categories: 9,
-	requests: 10
+	requests: 10,
+	sync: 11
 };
 
 function slugToTitle(slug: string): string {
