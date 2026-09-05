@@ -65,7 +65,7 @@ Completely eliminated the need to manually purge Cloudflare R2 cache and wait mi
   - Exposed `GET /sync/version` endpoint in `lament-api`.
 - **Frontend Auto-Sync Store (`sync.svelte.ts`)**:
   - Polls `/api/sync/version` every 30 seconds and on tab focus (`visibilitychange`).
-  - Automatically invalidates client memory cache and `persistentCache`, invokes `invalidateAll()`, and displays a toast notification: *"Katalog musik diperbarui ✨"*.
+  - Automatically invalidates client memory cache and `persistentCache`, invokes `invalidateAll()`, and displays a toast notification: *"Katalog musik diperbarui"*.
 
 ---
 
