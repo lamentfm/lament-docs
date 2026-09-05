@@ -164,20 +164,19 @@ Returns tracks ranked purely by historical playback volume (`t.play_count DESC`)
 
 ---
 
-## Get Catalog Sync Version
+## Record Track Playback
 
 ```http
-GET /sync/version
+POST /tracks/:id/play
 ```
 
-Returns the real-time `catalog_version` from `system_meta`. Used by client applications to automatically detect backend catalog changes and invalidate stale local caches without manual page refreshes.
+Increments the track's `play_count` counter. Called by listeners' client applications when playback progress satisfies the tracking threshold.
 
 ### Response (`200 OK`)
 
 ```json
 {
-  "version": 1788609521650,
-  "timestamp": 1788609521650
+  "success": true
 }
 ```
 
