@@ -19,45 +19,55 @@ Searches simultaneously across tracks, artists, and albums using fuzzy string ma
 
 ## Search Architecture & Algorithm
 
-Lament API uses a multi-stage search engine combining Levenshtein Distance fuzzy matching with weighted SQL query scoring.
+Lament API utilizes a high-speed, multi-stage search engine combining in-memory Levenshtein fuzzy matching, SQLite FTS5 Full-Text Search for lyrics, and single-shot batch querying:
 
 ```mermaid
 flowchart TD
-    Query["Search Query ('q')"] --> FuzzyArtist["1. Levenshtein Fuzzy Search on Artists (Max Distance: 3)"]
-    Query --> FuzzyCategory["2. Levenshtein Fuzzy Search on Categories (Max Distance: 2)"]
-    FuzzyArtist --> SQL["3. Execute SQL Query with Weighted Case Scoring"]
-    FuzzyCategory --> SQL
-    SQL --> Score["4. Assign Relevance Scores (100 / 80 / 60 / 30)"]
-    Score --> Sort["5. Sort by Score DESC -> Play Count DESC -> Created At DESC"]
-    Sort --> Result["6. Return JSON Response (Artists, Albums, Tracks)"]
+    Client["Client Keystroke ('q')"] --> FrontendOpt["Frontend: AbortController & Local Map Cache"]
+    FrontendOpt --> CacheCheck{"Backend Cache (60s)?"}
+    CacheCheck -- Hit --> CachedResp["Instant Response (1-2ms)"]
+    CacheCheck -- Miss --> FuzzyRAM["1. In-Memory Fuzzy Match on Artists (RAM <1ms)"]
+    FuzzyRAM --> FTS["2. Tokenize & Sanitize FTS5 Lyrics Query (q >= 3 chars)"]
+    FTS --> BatchSQL["3. Single-Shot HTTP Batch to Turso: db.batch([Tracks, Albums, Artists])"]
+    BatchSQL --> Ranking["4. Rank: Title Match (100) > Lyrics / Artist Match (50) > play_count DESC"]
+    Ranking --> Result["5. Return JSON & Populate 60s Cache"]
 ```
+
+---
+
+## High-Performance FTS5 Lyrics Search
+
+Unlike traditional relational queries that perform expensive $O(N)$ sequential scans (`LIKE %q%`), Lament indexes all song lyrics inside an inverted index using SQLite **FTS5**:
+
+- **FTS5 Inverted Index**: Lyrics are pre-tokenized into word dictionaries. When a user forgets the track title and searches a snippet of lyrics (e.g. `"terlanjur mencinta"`), the query matches via `lyrics_fts MATCH ?` in **~15ms – 100ms** (down from 2.3s+).
+- **Automated Triggers**: Any lyrics scraped or updated are instantly synced to `lyrics_fts` via database triggers (`lyrics_ai`, `lyrics_au`, `lyrics_ad`).
+- **Single-Shot Batch Roundtrip**: Tracks, albums, and artists are requested together using `db.batch([...], 'read')`, reducing 4 sequential HTTP network hops to just **1 single connection**.
 
 ---
 
 ## Scoring Calculation Matrix
 
-Each track match receives a calculated `relevance_score` based on match location and weight:
+Each track match receives a calculated ranking based on match location and popularity:
 
-| Match Type | Score | Description |
+| Match Type | Weight | Description |
 | --- | --- | --- |
-| **Track Title Match** | `100` | Exact or substring match in `tracks.title LIKE %q%` |
-| **Artist Match** | `80` | Match via Levenshtein fuzzy artist lookup or `track_artists` |
-| **Category Match** | `60` | Match via Levenshtein fuzzy category lookup or `track_categories` |
-| **Lyric Content Match** | `30` | Full-text substring match inside song lyrics (`lyrics.content LIKE %q%`) |
+| **Track Title Match** | `100` | Title starts with or contains query (`tracks.title LIKE %q%`) |
+| **Artist Direct / Fuzzy Match** | `50` | Direct match or typo-tolerant Levenshtein lookup (<1ms in RAM) |
+| **FTS5 Lyric Content Match** | `50` | Inverted index match inside song lyrics (`lyrics_fts MATCH ?`) |
 
 ---
 
 ## Tiebreaker & Sorting Rules
 
-Results are ordered using a 3-tier tiebreaker:
+Results are ordered using an optimized 3-tier tiebreaker:
 
 ```sql
-ORDER BY relevance_score DESC, t.play_count DESC, t.created_at DESC
+ORDER BY (CASE WHEN t.title LIKE ? THEN 100 ELSE 50 END) DESC, t.play_count DESC, t.created_at DESC
 ```
 
-1. **Relevance Score**: Highest calculated match score first.
-2. **Popularity Boosting (`play_count`)**: Tied scores are sorted by total track play counts.
-3. **Recency (`created_at`)**: Tied play counts are sorted by newest added tracks.
+1. **Title Priority**: Exact or substring title matches appear first.
+2. **Popularity (`play_count`)**: Tracks matching lyrics or artists are sorted by total plays.
+3. **Recency (`created_at`)**: Ties are sorted by newest added tracks.
 
 ---
 
