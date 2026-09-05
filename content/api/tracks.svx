@@ -13,7 +13,7 @@ endpoint: /tracks
 GET /tracks?limit=20&offset=0&q=Jatuh%20Suka
 ```
 
-Returns a paginated list of tracks matching criteria. Supports ETag validation (returns `304 Not Modified` when `If-None-Match` header matches).
+Returns a paginated list of tracks. In general browsing mode (when no search query is specified), tracks are dynamically interleaved in a **3 Western : 2 Indonesian** ratio to reflect authentic catalog proportions and prevent Western tracks from being buried. Supports ETag validation (returns `304 Not Modified` when `If-None-Match` header matches).
 
 ### Headers
 
@@ -113,16 +113,16 @@ Fetches complete metadata for a single track by ID.
 GET /tracks/:id/recommendations?limit=20
 ```
 
-Calculates recommended tracks matching the current track using category similarity weighting and popularity boosting.
+Calculates context-aware recommended tracks matching the currently playing track using language-biased grouping, category similarity, and session queue exclusion.
 
 ```mermaid
 flowchart TD
-    Req["GET /tracks/:id/recommendations"] --> SharedCategory["1. Join track_categories to find shared categories"]
-    SharedCategory --> Weight["2. Count shared_categories per candidate track"]
-    Weight --> Sort["3. Sort by shared_categories DESC -> play_count DESC -> RANDOM()"]
-    Sort --> CheckResults{"Found Matches?"}
-    CheckResults -- Yes --> ReturnRecs["Return Ranked Recommendations"]
-    CheckResults -- No --> FallbackPopular["Fallback: Top Tracks by play_count DESC + RANDOM()"]
+    Req["GET /tracks/:id/recommendations"] --> DetectLang["1. Classify Current Track (Indonesian vs Western)"]
+    DetectLang --> Bias["2. Apply 75% Primary Bias + 25% Diversity Split"]
+    Bias --> Score["3. Compute Relevance Score (Categories, Artist, Album, Play Count)"]
+    Score --> Exclude["4. Filter out ?exclude= queue session IDs"]
+    Exclude --> Sort["5. Order by score DESC -> RANDOM()"]
+    Sort --> ReturnRecs["6. Return 75% Matching Bias Recommendations"]
 ```
 
 ### Recommendation Parameters
@@ -130,6 +130,56 @@ flowchart TD
 | Parameter | Type | Default | Constraints | Description |
 | --- | --- | --- | --- | --- |
 | `limit` | integer | `20` | Min `1`, Max `50` | Number of recommendations to return |
+| `exclude` | string | `null` | Optional | Comma-separated track IDs currently in user's player queue to avoid repetition |
+
+---
+
+## Get Trending Tracks
+
+```http
+GET /tracks/trending?limit=20
+```
+
+Calculates actively trending tracks across the catalog by blending total play count with recency score:
+
+```sql
+ORDER BY (t.play_count * 2.0) + (CASE WHEN t.created_at >= datetime('now', '-30 days') THEN 20 ELSE 0 END) DESC
+```
+
+### Parameters
+
+| Parameter | Type | Default | Constraints | Description |
+| --- | --- | --- | --- | --- |
+| `limit` | integer | `20` | Min `1`, Max `50` | Max trending tracks to return |
+
+---
+
+## Get Most Played Tracks
+
+```http
+GET /tracks/most-played?limit=20
+```
+
+Returns tracks ranked purely by historical playback volume (`t.play_count DESC`).
+
+---
+
+## Get Catalog Sync Version
+
+```http
+GET /sync/version
+```
+
+Returns the real-time `catalog_version` from `system_meta`. Used by client applications to automatically detect backend catalog changes and invalidate stale local caches without manual page refreshes.
+
+### Response (`200 OK`)
+
+```json
+{
+  "version": 1788609521650,
+  "timestamp": 1788609521650
+}
+```
 
 ---
 
