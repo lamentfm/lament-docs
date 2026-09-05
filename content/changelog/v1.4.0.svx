@@ -1,0 +1,79 @@
+---
+title: "v1.4.0 - Instant FTS5 Search, Balanced Track Recommendation Engine & Zero-Delay Auto-Sync Cache Busting"
+date: "2026-09-05"
+version: "v1.4.0"
+---
+
+# v1.4.0 - Instant FTS5 Search, Balanced Track Recommendation Engine & Zero-Delay Auto-Sync Cache Busting
+
+> [!IMPORTANT]
+> **Major Release**: Introducing SQLite FTS5 Full-Text Search for ultra-fast lyrics searching, automated database synchronization triggers, a rebalanced track recommendation and catalog discovery algorithm, real-time auto-sync store on frontend, and version-based cache busting for audio and cover art that completely eliminates manual Cloudflare R2 purges.
+
+---
+
+## 1. Instant FTS5 Lyrics Search & Single-Shot Query Engine (`lament-api`)
+
+Re-architected the search backend to support high-performance full-text search across titles, artists, and lyrics:
+
+- **SQLite FTS5 Virtual Table (`lyrics_fts`)**:
+  - Created dedicated virtual table `CREATE VIRTUAL TABLE lyrics_fts USING fts5(track_id UNINDEXED, content)`.
+  - Built an inverted index across all 463 song lyrics in the Turso database.
+  - Replaced $O(N)$ sequential full-table scans (`LIKE %query%` which took 1.5s–2.3s) with $O(\log K)$ B-Tree token lookups via `lyrics_fts MATCH ?`.
+  - Database search latency dropped from **>2000ms down to ~15ms – 100ms**.
+- **Automated Database Triggers**:
+  - Created `lyrics_ai` (AFTER INSERT), `lyrics_au` (AFTER UPDATE), and `lyrics_ad` (AFTER DELETE) triggers directly inside Turso DB. Any new song scraped or lyrics updated automatically sync to `lyrics_fts` without manual scripts.
+- **Single-Shot Batch Roundtrip (`db.batch([...], 'read')`)**:
+  - Consolidated tracks, albums, and artists into 1 single HTTP request to Turso Cloud (Tokyo), eliminating 4 sequential internet roundtrips.
+  - Integrated `json_group_array` to resolve artist relations in a single query without cartesian join multiplication.
+- **In-Memory Fuzzy Artist Cache (<1ms)**:
+  - Cached all database artists in server memory with a 5-minute TTL, executing Levenshtein typo-tolerant matching in pure RAM.
+- **Frontend Optimization (`SearchModal.svelte`)**:
+  - Integrated `AbortController` to cancel in-flight HTTP requests when the user types quickly.
+  - Added in-memory session cache (`Map<string, SearchResult>`) for instantaneous 0ms repeat searches.
+  - Tuned debounce delay to 200ms.
+
+---
+
+## 2. Rebalanced Catalog Discovery & Recommendation Algorithm (`lament-api`)
+
+Resolved the severe catalog imbalance where Indonesian tracks dominated discovery despite the database being 77% Western music:
+
+- **Indonesian Classifier Refinement (`isIndonesianTrack`)**:
+  - Fixed false-positive classifications caused by short word substrings (e.g. "ran" matching inside "Ariana Grande").
+  - Implemented exact multi-word phrase matching and tokenized word boundary matching.
+  - Accurately segmented the active database: 127 Indonesian tracks (23%) vs 421 Western/International tracks (77%).
+- **Balanced Catalog Discovery (`listTracks`)**:
+  - Interleaving ratio: **3 Western : 2 Indonesian** to reflect actual catalog proportions without burying Western tracks under Indonesian ones.
+- **Context-Aware Recommendations (`getRecommendations`)**:
+  - When playing Western music: recommendations are biased 75% Western + 25% Indonesian.
+  - When playing Indonesian music: recommendations are biased 75% Indonesian + 25% Western.
+- **Trending & Most Played Endpoints**:
+  - Implemented `/tracks/trending` (blending play count and recency) and `/tracks/most-played`.
+
+---
+
+## 3. Real-Time Auto-Sync & Cache Busting (`lament-api` & `lament`)
+
+Completely eliminated the need to manually purge Cloudflare R2 cache and wait minutes for local browser audio cache to expire:
+
+- **Audio & Image Variant Cache Busting (`processor.ts`)**:
+  - `transformAudioUrl` and `formatImageVariants` append `?v=${updated_at}` version query parameters.
+  - Whenever track audio or cover art is updated, Cloudflare Edge and browser disk cache treat the file as a new resource immediately.
+- **Database Catalog Versioning (`system_meta`)**:
+  - Created `system_meta` table storing `catalog_version`.
+  - Added database triggers `tracks_catalog_ai`, `tracks_catalog_au`, and `tracks_catalog_ad` to automatically bump `catalog_version` whenever tracks are added, updated, or deleted.
+  - Exposed `GET /sync/version` endpoint in `lament-api`.
+- **Frontend Auto-Sync Store (`sync.svelte.ts`)**:
+  - Polls `/api/sync/version` every 30 seconds and on tab focus (`visibilitychange`).
+  - Automatically invalidates client memory cache and `persistentCache`, invokes `invalidateAll()`, and displays a toast notification: *"Katalog musik diperbarui ✨"*.
+
+---
+
+## 4. Architecture Cleanup & De-Hardcoding
+
+- **Dynamic CDN & Base URL Resolvers**:
+  - Removed all hardcoded domain strings (`cdn.lament.rynds.my.id`, `https://api.rynds.my.id`) in source code.
+  - Replaced with dynamic resolvers using `process.env.R2_PUBLIC_URL`, `process.env.STORAGE_BASE_URL`, and incoming request origins.
+- **Repository Hygiene**:
+  - Purged temporary benchmark and migration scratch scripts.
+  - Maintained complete integrity across all scraper and ingestion tooling in `lament-scrapper`.
