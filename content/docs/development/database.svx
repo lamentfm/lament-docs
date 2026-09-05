@@ -25,6 +25,7 @@ Stores catalog artist profiles and scraper image origin tags.
 | `image_url` | TEXT | NULL | Processed CDN image URL |
 | `image_source` | TEXT | NULL | Provider source tag (`lastfm`, `deezer`, `spotify`) |
 | `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Last modification timestamp |
 
 ---
 
@@ -44,6 +45,7 @@ Stores album metadata linked to artists.
 | `type` | TEXT | NOT NULL | Collection type (`album`, `ep`, `single`) |
 | `description` | TEXT | NULL | Album description notes |
 | `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Last modification timestamp |
 
 ---
 
@@ -82,6 +84,7 @@ Core table for music tracks, audio formats, bitrates, and anti-duplication IDs.
 | `status` | TEXT | DEFAULT 'ready' | Ingestion status (`pending`, `ready`, `failed`) |
 | `source` | TEXT | DEFAULT 'youtube' | Ingestion source provider |
 | `created_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Last modification timestamp |
 
 ---
 
@@ -193,9 +196,62 @@ Stores system-wide maintenance mode switches.
 
 ---
 
+---
+
+### 13. `system_meta` (System State & Catalog Versioning)
+
+Key-value store for global system metadata, including real-time catalog versioning for auto-sync.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `key` | TEXT | PRIMARY KEY | Configuration key (e.g. `catalog_version`) |
+| `value` | TEXT | NOT NULL | Stored value (e.g. Unix timestamp) |
+| `updated_at` | TEXT | DEFAULT CURRENT_TIMESTAMP | Last version update timestamp |
+
+---
+
+### 14. `lyrics_fts` (FTS5 Full-Text Search Virtual Table)
+
+High-performance inverted index for instant sub-100ms lyrics search queries.
+
+| Column | Type | Constraints | Description |
+| --- | --- | --- | --- |
+| `track_id` | TEXT | UNINDEXED | Target track ID reference |
+| `content` | TEXT | FTS5 Indexed | Tokenized lyrics body for `MATCH` lookups |
+
+---
+
 ## Database Indexes
 
+Lament utilizes 11 specialized B-Tree indexes for lightning-fast lookups and edge query performance:
+
 - `idx_lyrics_track_id`: Index on `lyrics(track_id)` for high-speed lyric lookups.
+- `idx_tracks_status_created`: Composite index on `tracks(status, created_at DESC)` for fast catalog pagination.
+- `idx_tracks_title`: B-Tree index on `tracks(title)` for instant track title lookups.
+- `idx_tracks_status_title`: Composite index on `tracks(status, title)` for active track search filtering.
+- `idx_tracks_play_count`: Index on `tracks(play_count DESC)` for most-played and trending track queries.
+- `idx_artists_name`: Index on `artists(name)` for artist name search queries.
+- `idx_albums_title`: Index on `albums(title)` for album title search queries.
+- `idx_track_artists_artist`: Index on `track_artists(artist_id)` for fast artist-to-track lookups.
+- `idx_track_artists_track`: Index on `track_artists(track_id)` for fast track-to-artist resolution.
+- `idx_track_categories_cat`: Index on `track_categories(category_id)` for category-based filtering.
+- `idx_track_categories_track`: Index on `track_categories(track_id)` for track genre resolution.
+
+---
+
+## Automated Database Triggers
+
+Lament leverages SQLite database-level triggers to guarantee real-time synchronization without manual scripts or external cron jobs:
+
+### Lyrics FTS5 Synchronization
+- `lyrics_ai`: `AFTER INSERT ON lyrics` &rarr; Automatically inserts new lyrics into `lyrics_fts`.
+- `lyrics_au`: `AFTER UPDATE ON lyrics` &rarr; Updates matching entries in `lyrics_fts`.
+- `lyrics_ad`: `AFTER DELETE ON lyrics` &rarr; Deletes matching entries from `lyrics_fts`.
+
+### Catalog Version Auto-Bump (Auto-Sync)
+- `tracks_catalog_ai`: `AFTER INSERT ON tracks` &rarr; Increments `catalog_version` in `system_meta`.
+- `tracks_catalog_au`: `AFTER UPDATE ON tracks` &rarr; Increments `catalog_version` in `system_meta`.
+- `tracks_catalog_ad`: `AFTER DELETE ON tracks` &rarr; Increments `catalog_version` in `system_meta`.
 
 ---
 
@@ -207,3 +263,4 @@ Push schema updates to Turso database:
 cd lament-api
 bun run db:push
 ```
+
