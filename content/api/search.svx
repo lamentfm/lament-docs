@@ -26,7 +26,7 @@ flowchart TD
     Client["Client Keystroke ('q')"] --> FrontendOpt["Frontend: AbortController & Local Map Cache"]
     FrontendOpt --> CacheCheck{"Backend Cache (60s)?"}
     CacheCheck -- Hit --> CachedResp["Instant Response (1-2ms)"]
-    CacheCheck -- Miss --> FuzzyRAM["1. In-Memory Fuzzy Match on Artists (RAM <1ms)"]
+    CacheCheck -- Miss --> FuzzyRAM["1. In-Memory Fuzzy Match on Artists (RAM sub-1ms)"]
     FuzzyRAM --> FTS["2. Tokenize & Sanitize FTS5 Lyrics Query (q >= 3 chars)"]
     FTS --> BatchSQL["3. Single-Shot HTTP Batch to Turso: db.batch([Tracks, Albums, Artists])"]
     BatchSQL --> Ranking["4. Rank: Title Match (100) > Lyrics / Artist Match (50) > play_count DESC"]
@@ -52,7 +52,7 @@ Each track match receives a calculated ranking based on match location and popul
 | Match Type | Weight | Description |
 | --- | --- | --- |
 | **Track Title Match** | `100` | Title starts with or contains query (`tracks.title LIKE %q%`) |
-| **Artist Direct / Fuzzy Match** | `50` | Direct match or typo-tolerant Levenshtein lookup (<1ms in RAM) |
+| **Artist Direct / Fuzzy Match** | `50` | Direct match or typo-tolerant Levenshtein lookup (sub-1ms in RAM) |
 | **FTS5 Lyric Content Match** | `50` | Inverted index match inside song lyrics (`lyrics_fts MATCH ?`) |
 
 ---
